@@ -5,9 +5,22 @@ const prisma = new PrismaClient();
 exports.createOrder = async (req, res) => {
   try {
     const { userId, items } = req.body; // items: [{ menuItemId, quantity }]
+    console.log('Creating order for user:', userId, 'with items:', items);
+    
     if (!userId || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'userId and items are required' });
     }
+    
+    // Validate that all menu items exist
+    const menuItemIds = items.map(item => item.menuItemId);
+    const existingItems = await prisma.menuItem.findMany({
+      where: { id: { in: menuItemIds } }
+    });
+    
+    if (existingItems.length !== menuItemIds.length) {
+      return res.status(400).json({ error: 'Some menu items do not exist' });
+    }
+    
     // Create order and order items in a transaction
     const order = await prisma.order.create({
       data: {
@@ -20,8 +33,14 @@ exports.createOrder = async (req, res) => {
           }))
         }
       },
-      include: { items: true }
+      include: { 
+        items: {
+          include: { menuItem: true }
+        }
+      }
     });
+    
+    console.log('Order created successfully:', order.id);
     res.status(201).json(order);
   } catch (err) {
     console.error('Create order error:', err);
@@ -62,6 +81,27 @@ exports.updateOrderStatus = async (req, res) => {
     });
     res.json(order);
   } catch (err) {
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+};
+
+// Get all orders (admin)
+exports.getAllOrders = async (req, res) => {
+  try {
+    console.log('Admin fetching all orders for user:', req.user);
+    const orders = await prisma.order.findMany({
+      include: {
+        user: true,
+        items: {
+          include: { menuItem: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    console.log(`Found ${orders.length} orders for admin`);
+    res.json(orders);
+  } catch (err) {
+    console.error('Get all orders error:', err);
     res.status(500).json({ error: 'Server error', details: err.message });
   }
 };
