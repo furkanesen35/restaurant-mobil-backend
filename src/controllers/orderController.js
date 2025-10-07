@@ -2,35 +2,60 @@ const { PrismaClient } = require('../generated/prisma');
 const prisma = new PrismaClient();
 
 // Create a new order
-exports.createOrder = async (req, res) => {
+exports.createOrder = async (req, res, next) => {
   try {
-    const { userId, items } = req.body; // items: [{ menuItemId, quantity }]
-    console.log('Creating order for user:', userId, 'with items:', items);
+    const { validationResult } = require('express-validator');
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    console.log('Full request body:', JSON.stringify(req.body, null, 2));
+    const { userId: bodyUserId, items } = req.body;
+    // Use userId from JWT token if available, otherwise from body
+    const userId = req.user ? req.user.userId : parseInt(bodyUserId);
+    
+    console.log('Extracted userId:', userId, 'bodyUserId:', bodyUserId, 'items:', items);
     
     if (!userId || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'userId and items are required' });
+      return res.status(400).json({ 
+        error: 'Invalid request',
+        message: 'User ID and items are required'
+      });
     }
     
+    // Convert string IDs to integers and validate
+    const processedItems = items.map(item => ({
+      menuItemId: parseInt(item.menuItemId),
+      quantity: parseInt(item.quantity) || 1
+    }));
+    
     // Validate that all menu items exist
-    const menuItemIds = items.map(item => item.menuItemId);
+    const menuItemIds = processedItems.map(item => item.menuItemId);
     const existingItems = await prisma.menuItem.findMany({
       where: { id: { in: menuItemIds } }
     });
     
     if (existingItems.length !== menuItemIds.length) {
-      return res.status(400).json({ error: 'Some menu items do not exist' });
+      const missingIds = menuItemIds.filter(
+        id => !existingItems.some(item => item.id === id)
+      );
+      return res.status(400).json({ 
+        error: 'Invalid menu items',
+        message: `Menu items with IDs ${missingIds.join(', ')} do not exist`
+      });
     }
     
     // Create order and order items in a transaction
     const order = await prisma.order.create({
       data: {
-        userId,
+        userId: parseInt(userId),
         status: 'pending',
         items: {
-          create: items.map(item => ({
-            menuItemId: item.menuItemId,
-            quantity: item.quantity || 1
-          }))
+          create: processedItems
         }
       },
       include: { 
@@ -41,30 +66,69 @@ exports.createOrder = async (req, res) => {
     });
     
     console.log('Order created successfully:', order.id);
-    res.status(201).json(order);
+    res.status(201).json({
+      success: true,
+      message: 'Order created successfully',
+      data: order
+    });
   } catch (err) {
     console.error('Create order error:', err);
-    res.status(500).json({ error: 'Server error', details: err.message });
+    next(err);
   }
 };
 
 // Get all orders for a user
-exports.getUserOrders = async (req, res) => {
+exports.getUserOrders = async (req, res, next) => {
   try {
-    const userId = parseInt(req.params.userId);
-    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const paramUserId = parseInt(req.params.userId);
+    const tokenUserId = req.user ? req.user.userId : null;
+    
+    // Use token user ID if available and matches, or param user ID if admin
+    let userId;
+    if (tokenUserId && (tokenUserId === paramUserId || req.user.role === 'admin')) {
+      userId = paramUserId;
+    } else if (tokenUserId) {
+      userId = tokenUserId; // Regular user can only see their own orders
+    } else {
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'Authentication required'
+      });
+    }
+    
+    if (!userId || userId < 1) {
+      return res.status(400).json({ 
+        error: 'Invalid user ID',
+        message: 'Valid user ID is required'
+      });
+    }
+    
+    console.log('Fetching orders for user:', userId);
+    
     const orders = await prisma.order.findMany({
       where: { userId },
       include: {
         items: {
-          include: { menuItem: true }
+          include: { 
+            menuItem: {
+              select: {
+                id: true,
+                name: true,
+                price: true
+              }
+            }
+          }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: 50 // Limit to last 50 orders for performance
     });
+    
+    console.log(`Found ${orders.length} orders for user ${userId}`);
     res.json(orders);
   } catch (err) {
-    res.status(500).json({ error: 'Server error', details: err.message });
+    console.error('Get user orders error:', err);
+    next(err);
   }
 };
 
@@ -103,5 +167,45 @@ exports.getAllOrders = async (req, res) => {
   } catch (err) {
     console.error('Get all orders error:', err);
     res.status(500).json({ error: 'Server error', details: err.message });
+  }
+};
+
+// Get current user's orders
+exports.getMyOrders = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'Valid authentication required'
+      });
+    }
+    
+    const userId = req.user.userId;
+    console.log('Fetching orders for authenticated user:', userId);
+    
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      include: {
+        items: {
+          include: { 
+            menuItem: {
+              select: {
+                id: true,
+                name: true,
+                price: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50 // Limit for performance
+    });
+    
+    console.log(`Found ${orders.length} orders for user ${userId}`);
+    res.json(orders);
+  } catch (err) {
+    console.error('Get my orders error:', err);
+    next(err);
   }
 };

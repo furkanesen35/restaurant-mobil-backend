@@ -1,17 +1,19 @@
 const express = require('express');
-const { body } = require('express-validator');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const { authValidation } = require('../middleware/validation');
+const { authLimiter } = require('../middleware/rateLimiter');
 
-router.post('/register', [
-  body('name').notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
-], authController.register);
+// Apply rate limiting to all auth routes
+router.use(authLimiter);
 
-router.post('/login', [
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').notEmpty().withMessage('Password is required')
-], authController.login);
+// Register user
+router.post('/register', authValidation.register, authController.register);
+
+// Login user
+router.post('/login', authValidation.login, authController.login);
+
+// Refresh token endpoint (if needed)
+router.post('/refresh', authController.refreshToken);
 
 module.exports = router;

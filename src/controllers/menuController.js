@@ -145,3 +145,71 @@ exports.seedMenu = async (req, res) => {
     res.status(500).json({ error: 'Failed to seed menu data', details: err.message });
   }
 };
+
+// Create new menu item (admin only)
+exports.createMenuItem = async (req, res) => {
+  try {
+    const { name, description, price, categoryId } = req.body;
+    
+    const menuItem = await prisma.menuItem.create({
+      data: {
+        name,
+        description,
+        price: parseFloat(price),
+        categoryId: parseInt(categoryId)
+      }
+    });
+    
+    res.status(201).json({
+      ...menuItem,
+      id: menuItem.id.toString(),
+      categoryId: menuItem.categoryId.toString()
+    });
+  } catch (err) {
+    console.error('Create menu item error:', err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+};
+
+// Update menu item (admin only)
+exports.updateMenuItem = async (req, res) => {
+  try {
+    const itemId = parseInt(req.params.id);
+    const { name, description, price, categoryId } = req.body;
+    
+    const menuItem = await prisma.menuItem.update({
+      where: { id: itemId },
+      data: {
+        ...(name && { name }),
+        ...(description && { description }),
+        ...(price && { price: parseFloat(price) }),
+        ...(categoryId && { categoryId: parseInt(categoryId) })
+      }
+    });
+    
+    res.json({
+      ...menuItem,
+      id: menuItem.id.toString(),
+      categoryId: menuItem.categoryId.toString()
+    });
+  } catch (err) {
+    console.error('Update menu item error:', err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+};
+
+// Delete menu item (admin only)
+exports.deleteMenuItem = async (req, res) => {
+  try {
+    const itemId = parseInt(req.params.id);
+    
+    await prisma.menuItem.delete({
+      where: { id: itemId }
+    });
+    
+    res.json({ message: 'Menu item deleted successfully' });
+  } catch (err) {
+    console.error('Delete menu item error:', err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+};
