@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 exports.createPaymentMethod = async (req, res) => {
   try {
     const { type, cardNumber, cardHolder, expiry, brand, paypalEmail, isDefault } = req.body;
-    const userId = req.user.id;
+  const userId = req.user.userId;
     const paymentMethod = await prisma.paymentMethod.create({
       data: { type, cardNumber, cardHolder, expiry, brand, paypalEmail, isDefault, userId },
     });
@@ -18,7 +18,7 @@ exports.createPaymentMethod = async (req, res) => {
 // Get all payment methods for user
 exports.getPaymentMethods = async (req, res) => {
   try {
-    const userId = req.user.id;
+  const userId = req.user.userId;
     const paymentMethods = await prisma.paymentMethod.findMany({ where: { userId } });
     res.json(paymentMethods);
   } catch (err) {

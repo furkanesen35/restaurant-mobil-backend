@@ -27,15 +27,14 @@ model User {
 }
 model Address {
   id         Int      @id @default(autoincrement())
-  user       User     @relation(fields: [userId], references: [id])
-  userId     Int
-  label      String   // e.g. Home, Work
+  label      String
   street     String
   city       String
-  state      String?
-  zip        String?
+  postalCode String
   country    String
-  phone      String?
+  phone      String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }

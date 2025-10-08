@@ -4,10 +4,19 @@ const prisma = new PrismaClient();
 // Create Address
 exports.createAddress = async (req, res) => {
   try {
-    const { label, street, city, state, zip, country, phone } = req.body;
-    const userId = req.user.id;
+  const { label, street, city, postalCode, country, phone } = req.body;
+  console.log('[DEBUG] req.user:', req.user);
+  const userId = req.user.userId;
     const address = await prisma.address.create({
-      data: { label, street, city, state, zip, country, phone, userId },
+      data: {
+        label,
+        street,
+        city,
+        postalCode,
+        country,
+        phone,
+        user: { connect: { id: userId } },
+      },
     });
     res.status(201).json(address);
   } catch (err) {
@@ -18,7 +27,7 @@ exports.createAddress = async (req, res) => {
 // Get all addresses for user
 exports.getAddresses = async (req, res) => {
   try {
-    const userId = req.user.id;
+  const userId = req.user.userId;
     const addresses = await prisma.address.findMany({ where: { userId } });
     res.json(addresses);
   } catch (err) {
@@ -30,10 +39,10 @@ exports.getAddresses = async (req, res) => {
 exports.updateAddress = async (req, res) => {
   try {
     const { id } = req.params;
-    const { label, street, city, state, zip, country, phone } = req.body;
+    const { label, street, city, postalCode, country, phone } = req.body;
     const address = await prisma.address.update({
       where: { id: parseInt(id) },
-      data: { label, street, city, state, zip, country, phone },
+      data: { label, street, city, postalCode, country, phone },
     });
     res.json(address);
   } catch (err) {
