@@ -24,7 +24,7 @@ exports.getMenu = async (req, res) => {
       }))
     );
     
-    console.log('Sending menu data:', { categories, items });
+  console.log(`Sending menu data: ${categories.length} categories, ${items.length} items`);
     res.json({ categories, items });
   } catch (err) {
     console.error('Menu fetch error:', err);

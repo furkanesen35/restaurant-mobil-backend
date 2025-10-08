@@ -1,3 +1,21 @@
+// Delete order (admin only)
+exports.deleteOrder = async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.orderId);
+    console.log('[DELETE] Attempting to delete order:', orderId);
+    if (!orderId) {
+      console.log('[DELETE] No orderId provided');
+      return res.status(400).json({ error: 'orderId required' });
+    }
+  // Cascade delete will handle related OrderItems automatically
+  await prisma.order.delete({ where: { id: orderId } });
+  console.log('[DELETE] Order deleted (cascade):', orderId);
+  res.json({ success: true });
+  } catch (err) {
+    console.error('[DELETE] Error deleting order:', err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+};
 const { PrismaClient } = require('../generated/prisma');
 const prisma = new PrismaClient();
 
@@ -14,13 +32,28 @@ exports.createOrder = async (req, res, next) => {
     }
 
     console.log('Full request body:', JSON.stringify(req.body, null, 2));
+    console.log('Raw request body type:', typeof req.body);
+    console.log('Raw items type:', typeof req.body.items, 'isArray:', Array.isArray(req.body.items));
+    
     const { userId: bodyUserId, items } = req.body;
     // Use userId from JWT token if available, otherwise from body
     const userId = req.user ? req.user.userId : parseInt(bodyUserId);
     
     console.log('Extracted userId:', userId, 'bodyUserId:', bodyUserId, 'items:', items);
     
-    if (!userId || !Array.isArray(items) || items.length === 0) {
+    // Convert object to array if needed (temporary fix for serialization issue)
+    let processedItems;
+    if (Array.isArray(items)) {
+      processedItems = items;
+    } else if (typeof items === 'object' && items !== null) {
+      // Convert object with numeric keys to array
+      processedItems = Object.values(items);
+      console.log('Converted object to array:', processedItems);
+    } else {
+      processedItems = [];
+    }
+    
+    if (!userId || !processedItems || processedItems.length === 0) {
       return res.status(400).json({ 
         error: 'Invalid request',
         message: 'User ID and items are required'
@@ -28,13 +61,13 @@ exports.createOrder = async (req, res, next) => {
     }
     
     // Convert string IDs to integers and validate
-    const processedItems = items.map(item => ({
+    const finalItems = processedItems.map(item => ({
       menuItemId: parseInt(item.menuItemId),
       quantity: parseInt(item.quantity) || 1
     }));
     
     // Validate that all menu items exist
-    const menuItemIds = processedItems.map(item => item.menuItemId);
+    const menuItemIds = finalItems.map(item => item.menuItemId);
     const existingItems = await prisma.menuItem.findMany({
       where: { id: { in: menuItemIds } }
     });
@@ -55,7 +88,7 @@ exports.createOrder = async (req, res, next) => {
         userId: parseInt(userId),
         status: 'pending',
         items: {
-          create: processedItems
+          create: finalItems
         }
       },
       include: { 
@@ -137,7 +170,11 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const orderId = parseInt(req.params.orderId);
     const { status } = req.body;
+    const allowedStatuses = ["pending", "confirmed", "preparing", "ready", "delivered", "cancelled"];
     if (!orderId || !status) return res.status(400).json({ error: 'orderId and status required' });
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status value', allowed: allowedStatuses });
+    }
     const order = await prisma.order.update({
       where: { id: orderId },
       data: { status },

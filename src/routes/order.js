@@ -19,6 +19,9 @@ router.post('/', (req, res, next) => {
 router.get('/user/:userId', authenticate, orderController.getUserOrders);
 
 // Update order status (admin only)
+
+// Delete an order (admin only)
+router.delete('/:orderId', authenticate, requireAdmin, orderController.deleteOrder);
 router.patch('/:orderId/status', authenticate, requireAdmin, orderValidation.updateStatus, orderController.updateOrderStatus);
 
 // Get all orders (admin only)

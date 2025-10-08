@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const app = express();
@@ -52,6 +51,12 @@ app.use('/api/auth', authRoutes);
 
 const orderRoutes = require('./routes/order');
 app.use('/api/order', orderRoutes);
+
+const addressRoutes = require('./routes/address');
+app.use('/api/address', addressRoutes);
+
+const paymentRoutes = require('./routes/payment');
+app.use('/api/payment', paymentRoutes);
 
 // Legacy routes for backward compatibility
 app.use('/menu', menuRoutes);
