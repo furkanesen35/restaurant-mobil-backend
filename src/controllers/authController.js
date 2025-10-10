@@ -26,6 +26,50 @@ const sanitizeUser = (user) => ({
   createdAt: user.createdAt
 });
 
+// Google Sign-In
+exports.googleSignIn = async (req, res, next) => {
+  try {
+    const { idToken, email, name } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    logger.info('Google sign-in attempt', { email });
+
+    // Check if user exists
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      // Create new user for Google sign-in
+      user = await prisma.user.create({
+        data: {
+          email,
+          name: name || email.split('@')[0],
+          password: '', // No password for Google users
+          role: 'user'
+        }
+      });
+      logger.info('New user created via Google sign-in', { userId: user.id, email });
+    } else {
+      logger.info('Existing user signed in via Google', { userId: user.id, email });
+    }
+
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    res.status(200).json({
+      message: 'Google sign-in successful',
+      token: accessToken,
+      refreshToken,
+      user: sanitizeUser(user)
+    });
+  } catch (error) {
+    logger.error('Google sign-in error', { error: error.message, stack: error.stack });
+    next(error);
+  }
+};
+
 exports.register = async (req, res, next) => {
   try {
     const errors = validationResult(req);

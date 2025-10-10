@@ -13,6 +13,9 @@ router.post('/register', authValidation.register, authController.register);
 // Login user
 router.post('/login', authValidation.login, authController.login);
 
+// Google Sign-In
+router.post('/google', authController.googleSignIn);
+
 // Refresh token endpoint (if needed)
 router.post('/refresh', authController.refreshToken);
 
