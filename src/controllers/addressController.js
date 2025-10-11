@@ -1,12 +1,12 @@
-const { PrismaClient } = require('../generated/prisma');
+const { PrismaClient } = require("../generated/prisma");
 const prisma = new PrismaClient();
 
 // Create Address
 exports.createAddress = async (req, res) => {
   try {
-  const { label, street, city, postalCode, country, phone } = req.body;
-  console.log('[DEBUG] req.user:', req.user);
-  const userId = req.user.userId;
+    const { label, street, city, postalCode, country, phone } = req.body;
+    console.log("[DEBUG] req.user:", req.user);
+    const userId = req.user.userId;
     const address = await prisma.address.create({
       data: {
         label,
@@ -27,7 +27,7 @@ exports.createAddress = async (req, res) => {
 // Get all addresses for user
 exports.getAddresses = async (req, res) => {
   try {
-  const userId = req.user.userId;
+    const userId = req.user.userId;
     const addresses = await prisma.address.findMany({ where: { userId } });
     res.json(addresses);
   } catch (err) {

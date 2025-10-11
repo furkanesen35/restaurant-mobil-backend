@@ -1,13 +1,30 @@
-const { PrismaClient } = require('../generated/prisma');
+const { PrismaClient } = require("../generated/prisma");
 const prisma = new PrismaClient();
 
 // Create Payment Method
 exports.createPaymentMethod = async (req, res) => {
   try {
-    const { type, cardNumber, cardHolder, expiry, brand, paypalEmail, isDefault } = req.body;
-  const userId = req.user.userId;
+    const {
+      type,
+      cardNumber,
+      cardHolder,
+      expiry,
+      brand,
+      paypalEmail,
+      isDefault,
+    } = req.body;
+    const userId = req.user.userId;
     const paymentMethod = await prisma.paymentMethod.create({
-      data: { type, cardNumber, cardHolder, expiry, brand, paypalEmail, isDefault, userId },
+      data: {
+        type,
+        cardNumber,
+        cardHolder,
+        expiry,
+        brand,
+        paypalEmail,
+        isDefault,
+        userId,
+      },
     });
     res.status(201).json(paymentMethod);
   } catch (err) {
@@ -18,8 +35,10 @@ exports.createPaymentMethod = async (req, res) => {
 // Get all payment methods for user
 exports.getPaymentMethods = async (req, res) => {
   try {
-  const userId = req.user.userId;
-    const paymentMethods = await prisma.paymentMethod.findMany({ where: { userId } });
+    const userId = req.user.userId;
+    const paymentMethods = await prisma.paymentMethod.findMany({
+      where: { userId },
+    });
     res.json(paymentMethods);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -30,10 +49,26 @@ exports.getPaymentMethods = async (req, res) => {
 exports.updatePaymentMethod = async (req, res) => {
   try {
     const { id } = req.params;
-    const { type, cardNumber, cardHolder, expiry, brand, paypalEmail, isDefault } = req.body;
+    const {
+      type,
+      cardNumber,
+      cardHolder,
+      expiry,
+      brand,
+      paypalEmail,
+      isDefault,
+    } = req.body;
     const paymentMethod = await prisma.paymentMethod.update({
       where: { id: parseInt(id) },
-      data: { type, cardNumber, cardHolder, expiry, brand, paypalEmail, isDefault },
+      data: {
+        type,
+        cardNumber,
+        cardHolder,
+        expiry,
+        brand,
+        paypalEmail,
+        isDefault,
+      },
     });
     res.json(paymentMethod);
   } catch (err) {
