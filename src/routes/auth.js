@@ -14,6 +14,16 @@ router.post('/register', authValidation.register, authController.register);
 router.post('/login', authValidation.login, authController.login);
 
 // Google Sign-In
+
+// Email verification
+router.post('/send-verification', authController.sendVerificationEmail);
+router.get('/verify-email', authController.verifyEmail);
+
+// Forgot/reset password
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
+
+// Google Sign-In
 router.post('/google', authController.googleSignIn);
 
 // Refresh token endpoint (if needed)
