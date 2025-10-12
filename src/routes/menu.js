@@ -7,24 +7,40 @@ const { authenticate, requireAdmin } = require("../middleware/auth");
 // Get all menu categories and items (public)
 router.get("/", menuController.getMenu);
 
+// Get all categories (public)
+router.get("/categories", menuController.getCategories);
+
 // Get a single menu item by id (public)
 router.get("/item/:id", menuValidation.getItem, menuController.getMenuItem);
 
-// Admin routes for menu management
-router.post("/item", authenticate, requireAdmin, menuController.createMenuItem);
-router.put(
-  "/item/:id",
+// Admin routes for category management
+router.post(
+  "/categories",
   authenticate,
   requireAdmin,
-  menuValidation.getItem,
-  menuController.updateMenuItem,
+  menuController.createCategory
+);
+router.put(
+  "/categories/:id",
+  authenticate,
+  requireAdmin,
+  menuController.updateCategory
 );
 router.delete(
-  "/item/:id",
+  "/categories/:id",
   authenticate,
   requireAdmin,
-  menuValidation.getItem,
-  menuController.deleteMenuItem,
+  menuController.deleteCategory
+);
+
+// Admin routes for menu item management
+router.post("/", authenticate, requireAdmin, menuController.createMenuItem);
+router.put("/:id", authenticate, requireAdmin, menuController.updateMenuItem);
+router.delete(
+  "/:id",
+  authenticate,
+  requireAdmin,
+  menuController.deleteMenuItem
 );
 
 // Seed menu data (for development only)

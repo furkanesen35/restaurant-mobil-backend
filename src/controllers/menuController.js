@@ -20,11 +20,11 @@ exports.getMenu = async (req, res) => {
         description: item.description || "",
         price: item.price,
         category: c.id.toString(),
-      })),
+      }))
     );
 
     console.log(
-      `Sending menu data: ${categories.length} categories, ${items.length} items`,
+      `Sending menu data: ${categories.length} categories, ${items.length} items`
     );
     res.json({ categories, items });
   } catch (err) {
@@ -456,6 +456,104 @@ exports.deleteMenuItem = async (req, res) => {
     res.json({ message: "Menu item deleted successfully" });
   } catch (err) {
     console.error("Delete menu item error:", err);
+    res.status(500).json({ error: "Server error", details: err.message });
+  }
+};
+
+// Get all categories
+exports.getCategories = async (req, res) => {
+  try {
+    const categories = await prisma.menuCategory.findMany({
+      orderBy: { name: "asc" },
+    });
+    res.json(
+      categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+      }))
+    );
+  } catch (err) {
+    console.error("Get categories error:", err);
+    res.status(500).json({ error: "Server error", details: err.message });
+  }
+};
+
+// Create category
+exports.createCategory = async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Category name is required" });
+    }
+
+    const category = await prisma.menuCategory.create({
+      data: {
+        name: name.trim(),
+      },
+    });
+
+    res.status(201).json({
+      id: category.id,
+      name: category.name,
+    });
+  } catch (err) {
+    console.error("Create category error:", err);
+    res.status(500).json({ error: "Server error", details: err.message });
+  }
+};
+
+// Update category
+exports.updateCategory = async (req, res) => {
+  try {
+    const categoryId = parseInt(req.params.id);
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Category name is required" });
+    }
+
+    const category = await prisma.menuCategory.update({
+      where: { id: categoryId },
+      data: {
+        name: name.trim(),
+      },
+    });
+
+    res.json({
+      id: category.id,
+      name: category.name,
+    });
+  } catch (err) {
+    console.error("Update category error:", err);
+    if (err.code === "P2025") {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    res.status(500).json({ error: "Server error", details: err.message });
+  }
+};
+
+// Delete category
+exports.deleteCategory = async (req, res) => {
+  try {
+    const categoryId = parseInt(req.params.id);
+
+    // Delete all menu items in this category first
+    await prisma.menuItem.deleteMany({
+      where: { categoryId },
+    });
+
+    // Then delete the category
+    await prisma.menuCategory.delete({
+      where: { id: categoryId },
+    });
+
+    res.json({ message: "Category and its items deleted successfully" });
+  } catch (err) {
+    console.error("Delete category error:", err);
+    if (err.code === "P2025") {
+      return res.status(404).json({ error: "Category not found" });
+    }
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
