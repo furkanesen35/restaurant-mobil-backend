@@ -1,5 +1,7 @@
 const { PrismaClient } = require("../generated/prisma");
 const prisma = new PrismaClient();
+const Stripe = require('stripe');
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Create Payment Method
 exports.createPaymentMethod = async (req, res) => {
@@ -84,5 +86,22 @@ exports.deletePaymentMethod = async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+};
+
+// Create Stripe PaymentIntent
+exports.createStripePaymentIntent = async (req, res) => {
+  try {
+    const { amount, currency = 'eur', payment_method_types = ['card'] } = req.body;
+    if (!amount) return res.status(400).json({ error: 'Amount required' });
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Stripe expects cents
+      currency,
+      payment_method_types,
+    });
+    res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (err) {
+    console.error('Stripe error:', err);
+    res.status(500).json({ error: 'Payment failed', details: err.message });
   }
 };
