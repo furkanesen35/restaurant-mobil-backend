@@ -94,10 +94,22 @@ exports.createStripePaymentIntent = async (req, res) => {
   try {
     const { amount, currency = 'eur', payment_method_types = ['card'] } = req.body;
     if (!amount) return res.status(400).json({ error: 'Amount required' });
+    
+    // Stripe requires minimum amount (50 cents in smallest currency unit)
+    // For EUR, minimum is 0.50 EUR
+    const minAmount = 0.50;
+    if (amount < minAmount) {
+      return res.status(400).json({ 
+        error: 'Amount too small', 
+        message: `Minimum amount is ${minAmount} ${currency.toUpperCase()}` 
+      });
+    }
+    
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Stripe expects cents
-      currency,
+      currency: currency.toLowerCase(),
       payment_method_types,
+      description: 'Restaurant order payment',
     });
     res.json({ clientSecret: paymentIntent.client_secret });
   } catch (err) {

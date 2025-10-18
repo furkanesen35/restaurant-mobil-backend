@@ -40,7 +40,7 @@ exports.createOrder = async (req, res, next) => {
       Array.isArray(req.body.items),
     );
 
-    const { userId: bodyUserId, items } = req.body;
+    const { userId: bodyUserId, items, addressId } = req.body;
     // Use userId from JWT token if available, otherwise from body
     const userId = req.user ? req.user.userId : parseInt(bodyUserId);
 
@@ -51,6 +51,8 @@ exports.createOrder = async (req, res, next) => {
       bodyUserId,
       "items:",
       items,
+      "addressId:",
+      addressId,
     );
 
     // Convert object to array if needed (temporary fix for serialization issue)
@@ -98,6 +100,7 @@ exports.createOrder = async (req, res, next) => {
     const order = await prisma.order.create({
       data: {
         userId: parseInt(userId),
+        addressId: addressId ? parseInt(addressId) : null,
         status: "pending",
         items: {
           create: finalItems,
@@ -107,6 +110,7 @@ exports.createOrder = async (req, res, next) => {
         items: {
           include: { menuItem: true },
         },
+        address: true,
       },
     });
 
@@ -156,6 +160,7 @@ exports.getUserOrders = async (req, res, next) => {
     const orders = await prisma.order.findMany({
       where: { userId },
       include: {
+        address: true,
         items: {
           include: {
             menuItem: {
@@ -218,6 +223,7 @@ exports.getAllOrders = async (req, res) => {
     const orders = await prisma.order.findMany({
       include: {
         user: true,
+        address: true,
         items: {
           include: { menuItem: true },
         },
