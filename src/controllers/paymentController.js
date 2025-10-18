@@ -14,6 +14,7 @@ exports.createPaymentMethod = async (req, res) => {
       brand,
       paypalEmail,
       isDefault,
+      saveToProfile = true,
     } = req.body;
     const userId = req.user.userId;
     const paymentMethod = await prisma.paymentMethod.create({
@@ -25,6 +26,7 @@ exports.createPaymentMethod = async (req, res) => {
         brand,
         paypalEmail,
         isDefault,
+        temporary: !saveToProfile, // Mark as temporary if not saving to profile
         userId,
       },
     });
@@ -38,8 +40,12 @@ exports.createPaymentMethod = async (req, res) => {
 exports.getPaymentMethods = async (req, res) => {
   try {
     const userId = req.user.userId;
+    // Only return non-temporary payment methods (saved to profile)
     const paymentMethods = await prisma.paymentMethod.findMany({
-      where: { userId },
+      where: { 
+        userId,
+        temporary: false, // Only get saved payment methods
+      },
     });
     res.json(paymentMethods);
   } catch (err) {

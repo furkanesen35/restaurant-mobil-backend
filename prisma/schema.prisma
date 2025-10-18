@@ -37,11 +37,11 @@ model Address {
   street     String
   city       String
   postalCode String
-  country    String
   phone      String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     Int
   orders     Order[]
+  temporary  Boolean  @default(false) // If true, not saved to user profile (one-time use)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -57,6 +57,7 @@ model PaymentMethod {
   brand      String?  // Visa, MasterCard, etc.
   paypalEmail String?
   isDefault  Boolean  @default(false)
+  temporary  Boolean  @default(false) // If true, not saved to user profile (one-time use)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
