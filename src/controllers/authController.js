@@ -174,7 +174,7 @@ const generateTokens = (user) => {
     process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
     {
       expiresIn: "30d",
-    },
+    }
   );
   return { accessToken, refreshToken };
 };
@@ -418,7 +418,7 @@ exports.refreshToken = async (req, res, next) => {
     // Verify refresh token
     const decoded = jwt.verify(
       refreshToken,
-      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
     );
 
     // Find user

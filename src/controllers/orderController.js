@@ -37,7 +37,7 @@ exports.createOrder = async (req, res, next) => {
       "Raw items type:",
       typeof req.body.items,
       "isArray:",
-      Array.isArray(req.body.items),
+      Array.isArray(req.body.items)
     );
 
     const { userId: bodyUserId, items, addressId } = req.body;
@@ -52,7 +52,7 @@ exports.createOrder = async (req, res, next) => {
       "items:",
       items,
       "addressId:",
-      addressId,
+      addressId
     );
 
     // Convert object to array if needed (temporary fix for serialization issue)
@@ -88,7 +88,7 @@ exports.createOrder = async (req, res, next) => {
 
     if (existingItems.length !== menuItemIds.length) {
       const missingIds = menuItemIds.filter(
-        (id) => !existingItems.some((item) => item.id === id),
+        (id) => !existingItems.some((item) => item.id === id)
       );
       return res.status(400).json({
         error: "Invalid menu items",

@@ -16,7 +16,7 @@ router.post(
     }
     next();
   },
-  orderController.createOrder,
+  orderController.createOrder
 );
 
 // Get all orders for a user (requires authentication)
@@ -29,14 +29,14 @@ router.delete(
   "/:orderId",
   authenticate,
   requireAdmin,
-  orderController.deleteOrder,
+  orderController.deleteOrder
 );
 router.patch(
   "/:orderId/status",
   authenticate,
   requireAdmin,
   orderValidation.updateStatus,
-  orderController.updateOrderStatus,
+  orderController.updateOrderStatus
 );
 
 // Get all orders (admin only)

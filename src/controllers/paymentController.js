@@ -1,6 +1,6 @@
 const { PrismaClient } = require("../generated/prisma");
 const prisma = new PrismaClient();
-const Stripe = require('stripe');
+const Stripe = require("stripe");
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Create Payment Method
@@ -42,7 +42,7 @@ exports.getPaymentMethods = async (req, res) => {
     const userId = req.user.userId;
     // Only return non-temporary payment methods (saved to profile)
     const paymentMethods = await prisma.paymentMethod.findMany({
-      where: { 
+      where: {
         userId,
         temporary: false, // Only get saved payment methods
       },
@@ -98,28 +98,32 @@ exports.deletePaymentMethod = async (req, res) => {
 // Create Stripe PaymentIntent
 exports.createStripePaymentIntent = async (req, res) => {
   try {
-    const { amount, currency = 'eur', payment_method_types = ['card'] } = req.body;
-    if (!amount) return res.status(400).json({ error: 'Amount required' });
-    
+    const {
+      amount,
+      currency = "eur",
+      payment_method_types = ["card"],
+    } = req.body;
+    if (!amount) return res.status(400).json({ error: "Amount required" });
+
     // Stripe requires minimum amount (50 cents in smallest currency unit)
     // For EUR, minimum is 0.50 EUR
-    const minAmount = 0.50;
+    const minAmount = 0.5;
     if (amount < minAmount) {
-      return res.status(400).json({ 
-        error: 'Amount too small', 
-        message: `Minimum amount is ${minAmount} ${currency.toUpperCase()}` 
+      return res.status(400).json({
+        error: "Amount too small",
+        message: `Minimum amount is ${minAmount} ${currency.toUpperCase()}`,
       });
     }
-    
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Stripe expects cents
       currency: currency.toLowerCase(),
       payment_method_types,
-      description: 'Restaurant order payment',
+      description: "Restaurant order payment",
     });
     res.json({ clientSecret: paymentIntent.client_secret });
   } catch (err) {
-    console.error('Stripe error:', err);
-    res.status(500).json({ error: 'Payment failed', details: err.message });
+    console.error("Stripe error:", err);
+    res.status(500).json({ error: "Payment failed", details: err.message });
   }
 };

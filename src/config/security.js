@@ -27,8 +27,10 @@ const securityConfig = {
         : ["http://localhost:3000", "http://localhost:19006"];
 
       // Allow all local network IPs (192.168.x.x, 10.x.x.x, etc.) and localhost
-      const isLocalNetwork = origin.match(/^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/) ||
-                            origin.match(/^exp:\/\/192\.168\.\d+\.\d+(:\d+)?$/);
+      const isLocalNetwork =
+        origin.match(
+          /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/
+        ) || origin.match(/^exp:\/\/192\.168\.\d+\.\d+(:\d+)?$/);
 
       if (allowedOrigins.indexOf(origin) !== -1 || isLocalNetwork) {
         callback(null, true);

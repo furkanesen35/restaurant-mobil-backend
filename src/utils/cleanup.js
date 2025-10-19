@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
  * Clean up temporary addresses and payment methods
  * These are one-time use items that users chose not to save to their profile
  * Run this periodically (e.g., daily cron job) to keep the database clean
- * 
+ *
  * Optionally, you can set a time threshold (e.g., delete temporary items older than 30 days)
  */
 exports.cleanupTemporaryData = async (daysOld = 30) => {
@@ -35,7 +35,9 @@ exports.cleanupTemporaryData = async (daysOld = 30) => {
 
     console.log(`Cleanup completed:`);
     console.log(`- Deleted ${deletedAddresses.count} temporary addresses`);
-    console.log(`- Deleted ${deletedPaymentMethods.count} temporary payment methods`);
+    console.log(
+      `- Deleted ${deletedPaymentMethods.count} temporary payment methods`
+    );
 
     return {
       addresses: deletedAddresses.count,
@@ -50,9 +52,12 @@ exports.cleanupTemporaryData = async (daysOld = 30) => {
 // If running this file directly for manual cleanup
 if (require.main === module) {
   const daysOld = process.argv[2] ? parseInt(process.argv[2]) : 30;
-  console.log(`Running cleanup for temporary data older than ${daysOld} days...`);
-  
-  exports.cleanupTemporaryData(daysOld)
+  console.log(
+    `Running cleanup for temporary data older than ${daysOld} days...`
+  );
+
+  exports
+    .cleanupTemporaryData(daysOld)
     .then((result) => {
       console.log("Cleanup successful:", result);
       process.exit(0);

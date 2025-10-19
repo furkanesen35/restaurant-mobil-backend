@@ -9,6 +9,10 @@ router.put("/:id", authenticate, paymentController.updatePaymentMethod);
 router.delete("/:id", authenticate, paymentController.deletePaymentMethod);
 
 // Stripe inline payment
-router.post("/stripe-intent", authenticate, paymentController.createStripePaymentIntent);
+router.post(
+  "/stripe-intent",
+  authenticate,
+  paymentController.createStripePaymentIntent
+);
 
 module.exports = router;
