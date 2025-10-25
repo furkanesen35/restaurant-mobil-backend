@@ -186,6 +186,7 @@ const sanitizeUser = (user) => ({
   email: user.email,
   role: user.role,
   createdAt: user.createdAt,
+  loyaltyPoints: user.loyaltyPoints ?? 0,
 });
 
 // Google Sign-In

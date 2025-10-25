@@ -42,11 +42,13 @@ exports.createOrder = async (req, res, next) => {
 
     const { userId: bodyUserId, items, addressId } = req.body;
     // Use userId from JWT token if available, otherwise from body
-    const userId = req.user ? req.user.userId : parseInt(bodyUserId);
+    const rawUserId = req.user ? req.user.userId : bodyUserId;
+    const userIdInt =
+      typeof rawUserId === "number" ? rawUserId : parseInt(rawUserId, 10);
 
     console.log(
       "Extracted userId:",
-      userId,
+      userIdInt,
       "bodyUserId:",
       bodyUserId,
       "items:",
@@ -67,7 +69,7 @@ exports.createOrder = async (req, res, next) => {
       processedItems = [];
     }
 
-    if (!userId || !processedItems || processedItems.length === 0) {
+    if (!userIdInt || !processedItems || processedItems.length === 0) {
       return res.status(400).json({
         error: "Invalid request",
         message: "User ID and items are required",
@@ -96,29 +98,63 @@ exports.createOrder = async (req, res, next) => {
       });
     }
 
-    // Create order and order items in a transaction
-    const order = await prisma.order.create({
-      data: {
-        userId: parseInt(userId),
-        addressId: addressId ? parseInt(addressId) : null,
-        status: "pending",
-        items: {
-          create: finalItems,
+    const itemQuantityMap = finalItems.reduce((acc, item) => {
+      acc[item.menuItemId] = item.quantity;
+      return acc;
+    }, {});
+
+    const orderTotal = existingItems.reduce((sum, item) => {
+      const quantity = itemQuantityMap[item.id] || 0;
+      return sum + item.price * quantity;
+    }, 0);
+
+    const loyaltyPointsEarned = Math.floor(orderTotal);
+
+    const [order, updatedUser] = await prisma.$transaction([
+      prisma.order.create({
+        data: {
+          userId: userIdInt,
+          addressId: addressId ? parseInt(addressId, 10) : null,
+          status: "pending",
+          items: {
+            create: finalItems,
+          },
         },
-      },
-      include: {
-        items: {
-          include: { menuItem: true },
+        include: {
+          items: {
+            include: { menuItem: true },
+          },
+          address: true,
         },
-        address: true,
-      },
-    });
+      }),
+      loyaltyPointsEarned > 0
+        ? prisma.user.update({
+            where: { id: userIdInt },
+            data: {
+              loyaltyPoints: {
+                increment: loyaltyPointsEarned,
+              },
+            },
+            select: {
+              loyaltyPoints: true,
+            },
+          })
+        : prisma.user.findUnique({
+            where: { id: userIdInt },
+            select: {
+              loyaltyPoints: true,
+            },
+          }),
+    ]);
 
     console.log("Order created successfully:", order.id);
     res.status(201).json({
       success: true,
       message: "Order created successfully",
       data: order,
+      loyaltyPointsEarned,
+      loyaltyPointsBalance: updatedUser?.loyaltyPoints ?? 0,
+      orderTotal,
     });
   } catch (err) {
     console.error("Create order error:", err);
@@ -205,12 +241,59 @@ exports.updateOrderStatus = async (req, res) => {
         .status(400)
         .json({ error: "Invalid status value", allowed: allowedStatuses });
     }
-    const order = await prisma.order.update({
+
+    // Get the order with items to calculate points
+    const existingOrder = await prisma.order.findUnique({
       where: { id: orderId },
-      data: { status },
-      include: { items: true },
+      include: {
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
     });
-    res.json(order);
+
+    if (!existingOrder) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    // Calculate order total to determine points to deduct
+    const orderTotal = existingOrder.items.reduce((sum, item) => {
+      return sum + item.menuItem.price * item.quantity;
+    }, 0);
+    const loyaltyPointsEarned = Math.floor(orderTotal);
+
+    // If cancelling an order that wasn't already cancelled, deduct loyalty points
+    const shouldDeductPoints =
+      status === "cancelled" && existingOrder.status !== "cancelled";
+
+    const [order, updatedUser] = await prisma.$transaction([
+      prisma.order.update({
+        where: { id: orderId },
+        data: { status },
+        include: { items: true },
+      }),
+      shouldDeductPoints && loyaltyPointsEarned > 0
+        ? prisma.user.update({
+            where: { id: existingOrder.userId },
+            data: {
+              loyaltyPoints: {
+                decrement: loyaltyPointsEarned,
+              },
+            },
+            select: {
+              loyaltyPoints: true,
+            },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    res.json({
+      ...order,
+      loyaltyPointsDeducted: shouldDeductPoints ? loyaltyPointsEarned : 0,
+      loyaltyPointsBalance: updatedUser?.loyaltyPoints,
+    });
   } catch (err) {
     res.status(500).json({ error: "Server error", details: err.message });
   }
