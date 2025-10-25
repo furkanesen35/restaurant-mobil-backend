@@ -67,6 +67,12 @@ app.use("/api/address", addressRoutes);
 const paymentRoutes = require("./routes/payment");
 app.use("/api/payment", paymentRoutes);
 
+const favoritesRoutes = require("./routes/favorites");
+app.use("/api/favorites", favoritesRoutes);
+
+const notificationsRoutes = require("./routes/notifications");
+app.use("/api/notifications", notificationsRoutes);
+
 // Legacy routes for backward compatibility
 app.use("/menu", menuRoutes);
 app.use("/auth", authRoutes);

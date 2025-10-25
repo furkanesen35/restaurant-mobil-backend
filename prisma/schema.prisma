@@ -24,6 +24,7 @@ model User {
   verificationToken  String?
   resetToken         String?
   resetTokenExpiry   DateTime?
+  pushToken          String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @default(now()) @updatedAt
   loyaltyPoints      Int       @default(0)
@@ -31,6 +32,7 @@ model User {
   reservations       Reservation[]
   addresses          Address[]
   paymentMethods     PaymentMethod[]
+  favorites          Favorite[]
 }
 model Address {
   id         Int      @id @default(autoincrement())
@@ -76,7 +78,14 @@ model MenuItem {
   price       Float
   category    MenuCategory @relation(fields: [categoryId], references: [id])
   categoryId  Int
+  imageUrl    String?
+  isVegetarian Boolean @default(false)
+  isVegan     Boolean @default(false)
+  isGlutenFree Boolean @default(false)
+  isSpicy     Boolean @default(false)
+  allergens   String? // Comma-separated list of allergens
   orderItems  OrderItem[]
+  favorites   Favorite[]
 }
 
 model Order {
@@ -87,6 +96,7 @@ model Order {
   addressId  Int?
   items      OrderItem[]
   status     String     @default("pending")
+  estimatedDeliveryTime DateTime?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 }
@@ -109,4 +119,15 @@ model Reservation {
   status     String   @default("active")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model Favorite {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItemId Int
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, menuItemId])
 }

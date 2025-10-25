@@ -3,8 +3,51 @@ const prisma = new PrismaClient();
 
 exports.getMenu = async (req, res) => {
   try {
+    const {
+      search,
+      categoryId,
+      isVegetarian,
+      isVegan,
+      isGlutenFree,
+      isSpicy,
+    } = req.query;
+
+    // Build filter conditions
+    const itemFilters = {};
+
+    if (categoryId) {
+      itemFilters.categoryId = parseInt(categoryId);
+    }
+
+    if (isVegetarian === "true") {
+      itemFilters.isVegetarian = true;
+    }
+
+    if (isVegan === "true") {
+      itemFilters.isVegan = true;
+    }
+
+    if (isGlutenFree === "true") {
+      itemFilters.isGlutenFree = true;
+    }
+
+    if (isSpicy === "true") {
+      itemFilters.isSpicy = true;
+    }
+
+    if (search) {
+      itemFilters.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
     const rawCategories = await prisma.menuCategory.findMany({
-      include: { items: true },
+      include: {
+        items: {
+          where: itemFilters,
+        },
+      },
     });
 
     // Convert IDs to strings for frontend compatibility
@@ -20,11 +63,17 @@ exports.getMenu = async (req, res) => {
         description: item.description || "",
         price: item.price,
         category: c.id.toString(),
+        imageUrl: item.imageUrl,
+        isVegetarian: item.isVegetarian,
+        isVegan: item.isVegan,
+        isGlutenFree: item.isGlutenFree,
+        isSpicy: item.isSpicy,
+        allergens: item.allergens,
       }))
     );
 
     console.log(
-      `Sending menu data: ${categories.length} categories, ${items.length} items`
+      `Sending menu data: ${categories.length} categories, ${items.length} items (filters applied: ${Object.keys(itemFilters).length})`
     );
     res.json({ categories, items });
   } catch (err) {

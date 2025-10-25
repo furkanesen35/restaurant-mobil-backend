@@ -18,6 +18,9 @@ exports.deleteOrder = async (req, res) => {
 };
 const { PrismaClient } = require("../generated/prisma");
 const prisma = new PrismaClient();
+const {
+  sendOrderStatusNotification,
+} = require("./notificationsController");
 
 // Create a new order
 exports.createOrder = async (req, res, next) => {
@@ -110,12 +113,19 @@ exports.createOrder = async (req, res, next) => {
 
     const loyaltyPointsEarned = Math.floor(orderTotal);
 
+    // Calculate estimated delivery time (30-45 minutes from now)
+    const estimatedMinutes = 30 + Math.floor(Math.random() * 16); // Random between 30-45 min
+    const estimatedDeliveryTime = new Date(
+      Date.now() + estimatedMinutes * 60 * 1000
+    );
+
     const [order, updatedUser] = await prisma.$transaction([
       prisma.order.create({
         data: {
           userId: userIdInt,
           addressId: addressId ? parseInt(addressId, 10) : null,
           status: "pending",
+          estimatedDeliveryTime,
           items: {
             create: finalItems,
           },
@@ -294,6 +304,9 @@ exports.updateOrderStatus = async (req, res) => {
       loyaltyPointsDeducted: shouldDeductPoints ? loyaltyPointsEarned : 0,
       loyaltyPointsBalance: updatedUser?.loyaltyPoints,
     });
+
+    // Send push notification for status change
+    sendOrderStatusNotification(orderId, status);
   } catch (err) {
     res.status(500).json({ error: "Server error", details: err.message });
   }
