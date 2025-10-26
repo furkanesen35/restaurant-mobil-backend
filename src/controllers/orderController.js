@@ -234,8 +234,22 @@ exports.getUserOrders = async (req, res, next) => {
 // Update order status (admin or kitchen)
 exports.updateOrderStatus = async (req, res) => {
   try {
+    // Validate request first
+    const { validationResult } = require("express-validator");
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log("[UPDATE STATUS] Validation errors:", errors.array());
+      return res.status(400).json({
+        error: "Validation failed",
+        details: errors.array(),
+      });
+    }
+
     const orderId = parseInt(req.params.orderId);
     const { status } = req.body;
+    
+    console.log(`[UPDATE STATUS] Updating order ${orderId} to status: ${status}`);
+    
     const allowedStatuses = [
       "pending",
       "confirmed",
@@ -244,12 +258,16 @@ exports.updateOrderStatus = async (req, res) => {
       "delivered",
       "cancelled",
     ];
-    if (!orderId || !status)
+    
+    if (!orderId || !status) {
+      console.log("[UPDATE STATUS] Missing orderId or status");
       return res.status(400).json({ error: "orderId and status required" });
+    }
+    
     if (!allowedStatuses.includes(status)) {
+      console.log("[UPDATE STATUS] Invalid status:", status);
       return res
-        .status(400)
-        .json({ error: "Invalid status value", allowed: allowedStatuses });
+        .status(400).json({ error: "Invalid status value", allowed: allowedStatuses });
     }
 
     // Get the order with items to calculate points
@@ -265,6 +283,7 @@ exports.updateOrderStatus = async (req, res) => {
     });
 
     if (!existingOrder) {
+      console.log("[UPDATE STATUS] Order not found:", orderId);
       return res.status(404).json({ error: "Order not found" });
     }
 
@@ -278,26 +297,35 @@ exports.updateOrderStatus = async (req, res) => {
     const shouldDeductPoints =
       status === "cancelled" && existingOrder.status !== "cancelled";
 
-    const [order, updatedUser] = await prisma.$transaction([
-      prisma.order.update({
+    // Update order status and handle loyalty points in transaction
+    let updatedUser = null;
+    const order = await prisma.$transaction(async (tx) => {
+      // Update the order status
+      const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: { status },
         include: { items: true },
-      }),
-      shouldDeductPoints && loyaltyPointsEarned > 0
-        ? prisma.user.update({
-            where: { id: existingOrder.userId },
-            data: {
-              loyaltyPoints: {
-                decrement: loyaltyPointsEarned,
-              },
+      });
+
+      // Deduct loyalty points if cancelling
+      if (shouldDeductPoints && loyaltyPointsEarned > 0) {
+        updatedUser = await tx.user.update({
+          where: { id: existingOrder.userId },
+          data: {
+            loyaltyPoints: {
+              decrement: loyaltyPointsEarned,
             },
-            select: {
-              loyaltyPoints: true,
-            },
-          })
-        : Promise.resolve(null),
-    ]);
+          },
+          select: {
+            loyaltyPoints: true,
+          },
+        });
+      }
+
+      return updatedOrder;
+    });
+
+    console.log(`[UPDATE STATUS] Order ${orderId} updated to ${status}`);
 
     res.json({
       ...order,
@@ -308,6 +336,7 @@ exports.updateOrderStatus = async (req, res) => {
     // Send push notification for status change
     sendOrderStatusNotification(orderId, status);
   } catch (err) {
+    console.error("[UPDATE STATUS] Error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
