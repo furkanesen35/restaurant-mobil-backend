@@ -7,10 +7,84 @@ exports.deleteOrder = async (req, res) => {
       console.log("[DELETE] No orderId provided");
       return res.status(400).json({ error: "orderId required" });
     }
-    // Cascade delete will handle related OrderItems automatically
-    await prisma.order.delete({ where: { id: orderId } });
+
+    // Get order with items to calculate loyalty points to deduct
+    const existingOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+
+    if (!existingOrder) {
+      console.log("[DELETE] Order not found:", orderId);
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    // Calculate loyalty points that were earned from this order (prefer stored value)
+    const recalculatedPoints = Math.floor(
+      existingOrder.items.reduce((sum, item) => {
+        const itemPrice = item.menuItem.price * item.quantity;
+        const multiplier = item.loyaltyPointsMultiplier || 1.0;
+        return sum + (itemPrice * multiplier);
+      }, 0)
+    );
+
+    let loyaltyPointsEarned = existingOrder.loyaltyPointsAwarded ?? 0;
+    if (!loyaltyPointsEarned && recalculatedPoints) {
+      loyaltyPointsEarned = recalculatedPoints;
+    }
+
+    // Only deduct points if order wasn't already cancelled
+    const shouldDeductPoints = existingOrder.status !== "cancelled";
+
+    console.log(`[DELETE] Order status: ${existingOrder.status}, Points to deduct: ${shouldDeductPoints ? loyaltyPointsEarned : 0}`);
+
+    // Delete order and deduct loyalty points in transaction
+    let newLoyaltyBalance = null;
+    await prisma.$transaction(async (tx) => {
+      // Deduct loyalty points if order wasn't cancelled
+      if (shouldDeductPoints && loyaltyPointsEarned > 0) {
+        console.log(`[DELETE] Deducting ${loyaltyPointsEarned} points from user ${existingOrder.userId}`);
+        const updatedUser = await tx.user.update({
+          where: { id: existingOrder.userId },
+          data: {
+            loyaltyPoints: {
+              decrement: loyaltyPointsEarned,
+            },
+          },
+          select: {
+            loyaltyPoints: true,
+          },
+        });
+        newLoyaltyBalance = updatedUser.loyaltyPoints;
+        console.log(`[DELETE] User's new loyalty points balance: ${newLoyaltyBalance}`);
+      }
+
+      // Cascade delete will handle related OrderItems automatically
+      await tx.order.delete({ where: { id: orderId } });
+    });
+
     console.log("[DELETE] Order deleted (cascade):", orderId);
-    res.json({ success: true });
+    
+    if (newLoyaltyBalance === null) {
+      const user = await prisma.user.findUnique({
+        where: { id: existingOrder.userId },
+        select: { loyaltyPoints: true },
+      });
+      newLoyaltyBalance = user?.loyaltyPoints ?? null;
+      console.log(`[DELETE] (No deduction) Current user loyalty balance: ${newLoyaltyBalance}`);
+    }
+
+    res.json({
+      success: true,
+      loyaltyPointsDeducted: shouldDeductPoints ? loyaltyPointsEarned : 0,
+      loyaltyPointsBalance: newLoyaltyBalance,
+    });
   } catch (err) {
     console.error("[DELETE] Error deleting order:", err);
     res.status(500).json({ error: "Server error", details: err.message });
@@ -101,10 +175,21 @@ exports.createOrder = async (req, res, next) => {
       });
     }
 
+    // Create item map for quantities and multipliers
     const itemQuantityMap = finalItems.reduce((acc, item) => {
       acc[item.menuItemId] = item.quantity;
       return acc;
     }, {});
+
+    // Add multiplier to finalItems from existing menu items
+    const finalItemsWithMultiplier = finalItems.map((item) => {
+      const menuItem = existingItems.find((mi) => mi.id === item.menuItemId);
+      return {
+        menuItemId: item.menuItemId,
+        quantity: item.quantity,
+        loyaltyPointsMultiplier: menuItem?.loyaltyPointsMultiplier || 1.0,
+      };
+    });
 
     const orderTotal = existingItems.reduce((sum, item) => {
       const quantity = itemQuantityMap[item.id] || 0;
@@ -128,7 +213,15 @@ exports.createOrder = async (req, res, next) => {
       }
     }
 
-    const loyaltyPointsEarned = Math.floor(orderTotal);
+    // Calculate loyalty points with multipliers
+    const loyaltyPointsEarned = Math.floor(
+      existingItems.reduce((sum, item) => {
+        const quantity = itemQuantityMap[item.id] || 0;
+        const itemPrice = item.price * quantity;
+        const multiplier = item.loyaltyPointsMultiplier || 1.0;
+        return sum + (itemPrice * multiplier);
+      }, 0)
+    );
 
     // Calculate estimated delivery time (30-45 minutes from now)
     const estimatedMinutes = 30 + Math.floor(Math.random() * 16); // Random between 30-45 min
@@ -143,8 +236,9 @@ exports.createOrder = async (req, res, next) => {
           addressId: addressId ? parseInt(addressId, 10) : null,
           status: "pending",
           estimatedDeliveryTime,
+          loyaltyPointsAwarded: loyaltyPointsEarned,
           items: {
-            create: finalItems,
+            create: finalItemsWithMultiplier,
           },
         },
         include: {
@@ -304,15 +398,28 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    // Calculate order total to determine points to deduct
-    const orderTotal = existingOrder.items.reduce((sum, item) => {
-      return sum + item.menuItem.price * item.quantity;
-    }, 0);
-    const loyaltyPointsEarned = Math.floor(orderTotal);
+    // Calculate loyalty points to deduct using stored award data
+    const recalculatedPoints = Math.floor(
+      existingOrder.items.reduce((sum, item) => {
+        const itemPrice = item.menuItem.price * item.quantity;
+        const multiplier = item.loyaltyPointsMultiplier || 1.0;
+        console.log(`[UPDATE STATUS] Item: ${item.menuItem.name}, Price: ${item.menuItem.price}, Qty: ${item.quantity}, Multiplier: ${multiplier}, Points: ${itemPrice * multiplier}`);
+        return sum + (itemPrice * multiplier);
+      }, 0)
+    );
+
+    const loyaltyPointsAwarded = existingOrder.loyaltyPointsAwarded ?? 0;
+    const loyaltyPointsToDeduct = loyaltyPointsAwarded > 0 ? loyaltyPointsAwarded : recalculatedPoints;
+
+    console.log(`[UPDATE STATUS] Stored loyalty points awarded: ${loyaltyPointsAwarded}, Recalculated: ${recalculatedPoints}`);
+    console.log(`[UPDATE STATUS] Total loyalty points to deduct: ${loyaltyPointsToDeduct}`);
+    console.log(`[UPDATE STATUS] Existing order status: ${existingOrder.status}, New status: ${status}`);
 
     // If cancelling an order that wasn't already cancelled, deduct loyalty points
     const shouldDeductPoints =
       status === "cancelled" && existingOrder.status !== "cancelled";
+
+    console.log(`[UPDATE STATUS] Should deduct points: ${shouldDeductPoints}`);
 
     // Update order status and handle loyalty points in transaction
     let updatedUser = null;
@@ -325,28 +432,31 @@ exports.updateOrderStatus = async (req, res) => {
       });
 
       // Deduct loyalty points if cancelling
-      if (shouldDeductPoints && loyaltyPointsEarned > 0) {
+      if (shouldDeductPoints && loyaltyPointsToDeduct > 0) {
+        console.log(`[UPDATE STATUS] Deducting ${loyaltyPointsToDeduct} points from user ${existingOrder.userId}`);
         updatedUser = await tx.user.update({
           where: { id: existingOrder.userId },
           data: {
             loyaltyPoints: {
-              decrement: loyaltyPointsEarned,
+              decrement: loyaltyPointsToDeduct,
             },
           },
           select: {
             loyaltyPoints: true,
           },
         });
+        console.log(`[UPDATE STATUS] User's new loyalty points balance: ${updatedUser.loyaltyPoints}`);
       }
 
       return updatedOrder;
     });
 
     console.log(`[UPDATE STATUS] Order ${orderId} updated to ${status}`);
+    console.log(`[UPDATE STATUS] Response - loyaltyPointsDeducted: ${shouldDeductPoints ? loyaltyPointsToDeduct : 0}, loyaltyPointsBalance: ${updatedUser?.loyaltyPoints}`);
 
     res.json({
       ...order,
-      loyaltyPointsDeducted: shouldDeductPoints ? loyaltyPointsEarned : 0,
+      loyaltyPointsDeducted: shouldDeductPoints ? loyaltyPointsToDeduct : 0,
       loyaltyPointsBalance: updatedUser?.loyaltyPoints,
     });
 

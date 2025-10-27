@@ -69,6 +69,7 @@ exports.getMenu = async (req, res) => {
         isGlutenFree: item.isGlutenFree,
         isSpicy: item.isSpicy,
         allergens: item.allergens,
+        loyaltyPointsMultiplier: item.loyaltyPointsMultiplier || 1.0,
       }))
     );
 
@@ -444,7 +445,7 @@ exports.seedMenu = async (req, res) => {
 // Create new menu item (admin only)
 exports.createMenuItem = async (req, res) => {
   try {
-    const { name, description, price, categoryId } = req.body;
+    const { name, description, price, categoryId, loyaltyPointsMultiplier } = req.body;
 
     const menuItem = await prisma.menuItem.create({
       data: {
@@ -452,6 +453,7 @@ exports.createMenuItem = async (req, res) => {
         description,
         price: parseFloat(price),
         categoryId: parseInt(categoryId),
+        loyaltyPointsMultiplier: loyaltyPointsMultiplier ? parseFloat(loyaltyPointsMultiplier) : 1.0,
       },
     });
 
@@ -470,7 +472,7 @@ exports.createMenuItem = async (req, res) => {
 exports.updateMenuItem = async (req, res) => {
   try {
     const itemId = parseInt(req.params.id);
-    const { name, description, price, categoryId } = req.body;
+    const { name, description, price, categoryId, loyaltyPointsMultiplier } = req.body;
 
     const menuItem = await prisma.menuItem.update({
       where: { id: itemId },
@@ -479,6 +481,7 @@ exports.updateMenuItem = async (req, res) => {
         ...(description && { description }),
         ...(price && { price: parseFloat(price) }),
         ...(categoryId && { categoryId: parseInt(categoryId) }),
+        ...(loyaltyPointsMultiplier && { loyaltyPointsMultiplier: parseFloat(loyaltyPointsMultiplier) }),
       },
     });
 
