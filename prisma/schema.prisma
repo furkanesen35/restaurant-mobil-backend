@@ -131,3 +131,12 @@ model Favorite {
 
   @@unique([userId, menuItemId])
 }
+
+model Settings {
+  id            Int      @id @default(autoincrement())
+  key           String   @unique
+  value         String
+  description   String?
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+}

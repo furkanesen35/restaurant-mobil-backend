@@ -111,6 +111,23 @@ exports.createOrder = async (req, res, next) => {
       return sum + item.price * quantity;
     }, 0);
 
+    // Check minimum order value
+    const minOrderSetting = await prisma.settings.findUnique({
+      where: { key: 'minOrderValue' }
+    });
+    
+    if (minOrderSetting) {
+      const minOrderValue = parseFloat(minOrderSetting.value);
+      if (orderTotal < minOrderValue) {
+        return res.status(400).json({
+          error: 'Order below minimum',
+          message: `Minimum order value is €${minOrderValue.toFixed(2)}. Your order total is €${orderTotal.toFixed(2)}.`,
+          minOrderValue,
+          currentTotal: orderTotal
+        });
+      }
+    }
+
     const loyaltyPointsEarned = Math.floor(orderTotal);
 
     // Calculate estimated delivery time (30-45 minutes from now)

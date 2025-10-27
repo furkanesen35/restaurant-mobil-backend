@@ -73,6 +73,9 @@ app.use("/api/favorites", favoritesRoutes);
 const notificationsRoutes = require("./routes/notifications");
 app.use("/api/notifications", notificationsRoutes);
 
+const settingsRoutes = require("./routes/settings");
+app.use("/api/settings", settingsRoutes);
+
 // Legacy routes for backward compatibility
 app.use("/menu", menuRoutes);
 app.use("/auth", authRoutes);
