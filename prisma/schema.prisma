@@ -33,6 +33,8 @@ model User {
   addresses          Address[]
   paymentMethods     PaymentMethod[]
   favorites          Favorite[]
+  createdTokens      VisitToken[] @relation("CreatedTokens")
+  redeemedTokens     VisitToken[] @relation("RedeemedTokens")
 }
 model Address {
   id         Int      @id @default(autoincrement())
@@ -142,4 +144,23 @@ model Settings {
   description   String?
   updatedAt     DateTime @updatedAt
   createdAt     DateTime @default(now())
+}
+
+model VisitToken {
+  id                  Int       @id @default(autoincrement())
+  code                String    @unique
+  points              Int
+  createdBy           User      @relation("CreatedTokens", fields: [createdById], references: [id])
+  createdById         Int
+  createdAt           DateTime  @default(now())
+  expiresAt           DateTime
+  redeemedBy          User?     @relation("RedeemedTokens", fields: [redeemedById], references: [id])
+  redeemedById        Int?
+  redeemedAt          DateTime?
+  isActive            Boolean   @default(true)
+  restaurantLocation  String?
+  notes               String?
+  
+  @@index([code])
+  @@index([isActive, expiresAt])
 }
