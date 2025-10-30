@@ -1,4 +1,5 @@
 const { PrismaClient } = require("../generated/prisma");
+const logger = require('../utils/logger');
 const prisma = new PrismaClient();
 const Stripe = require("stripe");
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -123,7 +124,8 @@ exports.createStripePaymentIntent = async (req, res) => {
     });
     res.json({ clientSecret: paymentIntent.client_secret });
   } catch (err) {
-    console.error("Stripe error:", err);
+    logger.error("Stripe error:", err);
     res.status(500).json({ error: "Payment failed", details: err.message });
   }
 };
+

@@ -1,4 +1,5 @@
 const { PrismaClient } = require("../generated/prisma");
+const logger = require('../utils/logger');
 const prisma = new PrismaClient();
 
 // Get user's favorites
@@ -38,7 +39,7 @@ exports.getFavorites = async (req, res) => {
 
     res.json(formattedFavorites);
   } catch (err) {
-    console.error("Get favorites error:", err);
+    logger.error("Get favorites error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -96,7 +97,7 @@ exports.addFavorite = async (req, res) => {
       favorite,
     });
   } catch (err) {
-    console.error("Add favorite error:", err);
+    logger.error("Add favorite error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -125,7 +126,7 @@ exports.removeFavorite = async (req, res) => {
     if (err.code === "P2025") {
       return res.status(404).json({ error: "Favorite not found" });
     }
-    console.error("Remove favorite error:", err);
+    logger.error("Remove favorite error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -147,7 +148,8 @@ exports.checkFavorite = async (req, res) => {
 
     res.json({ isFavorite: !!favorite });
   } catch (err) {
-    console.error("Check favorite error:", err);
+    logger.error("Check favorite error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
+

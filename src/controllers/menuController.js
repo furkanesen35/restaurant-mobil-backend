@@ -1,4 +1,5 @@
 const { PrismaClient } = require("../generated/prisma");
+const logger = require('../utils/logger');
 const prisma = new PrismaClient();
 
 exports.getMenu = async (req, res) => {
@@ -73,12 +74,12 @@ exports.getMenu = async (req, res) => {
       }))
     );
 
-    console.log(
+    logger.info(
       `Sending menu data: ${categories.length} categories, ${items.length} items (filters applied: ${Object.keys(itemFilters).length})`
     );
     res.json({ categories, items });
   } catch (err) {
-    console.error("Menu fetch error:", err);
+    logger.error("Menu fetch error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -435,7 +436,7 @@ exports.seedMenu = async (req, res) => {
       message: "Menu data seeded with next-level bar & grill items!",
     });
   } catch (err) {
-    console.error("Seeding error:", err);
+    logger.error("Seeding error:", err);
     res
       .status(500)
       .json({ error: "Failed to seed menu data", details: err.message });
@@ -463,7 +464,7 @@ exports.createMenuItem = async (req, res) => {
       categoryId: menuItem.categoryId.toString(),
     });
   } catch (err) {
-    console.error("Create menu item error:", err);
+    logger.error("Create menu item error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -491,7 +492,7 @@ exports.updateMenuItem = async (req, res) => {
       categoryId: menuItem.categoryId.toString(),
     });
   } catch (err) {
-    console.error("Update menu item error:", err);
+    logger.error("Update menu item error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -507,7 +508,7 @@ exports.deleteMenuItem = async (req, res) => {
 
     res.json({ message: "Menu item deleted successfully" });
   } catch (err) {
-    console.error("Delete menu item error:", err);
+    logger.error("Delete menu item error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -525,7 +526,7 @@ exports.getCategories = async (req, res) => {
       }))
     );
   } catch (err) {
-    console.error("Get categories error:", err);
+    logger.error("Get categories error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -550,7 +551,7 @@ exports.createCategory = async (req, res) => {
       name: category.name,
     });
   } catch (err) {
-    console.error("Create category error:", err);
+    logger.error("Create category error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -577,7 +578,7 @@ exports.updateCategory = async (req, res) => {
       name: category.name,
     });
   } catch (err) {
-    console.error("Update category error:", err);
+    logger.error("Update category error:", err);
     if (err.code === "P2025") {
       return res.status(404).json({ error: "Category not found" });
     }
@@ -602,10 +603,11 @@ exports.deleteCategory = async (req, res) => {
 
     res.json({ message: "Category and its items deleted successfully" });
   } catch (err) {
-    console.error("Delete category error:", err);
+    logger.error("Delete category error:", err);
     if (err.code === "P2025") {
       return res.status(404).json({ error: "Category not found" });
     }
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
+

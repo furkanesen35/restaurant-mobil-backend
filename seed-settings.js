@@ -1,4 +1,5 @@
 const { PrismaClient } = require('./src/generated/prisma');
+const logger = require('./src/utils/logger');
 const prisma = new PrismaClient();
 
 async function seedSettings() {
@@ -17,10 +18,10 @@ async function seedSettings() {
       }
     });
     
-    console.log('✓ Minimum order value setting created:', minOrderValue);
+    logger.info('✓ Minimum order value setting created:', minOrderValue);
     
   } catch (error) {
-    console.error('Error seeding settings:', error);
+    logger.error('Error seeding settings:', error);
   } finally {
     await prisma.$disconnect();
   }

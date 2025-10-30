@@ -2,9 +2,9 @@
 exports.deleteOrder = async (req, res) => {
   try {
     const orderId = parseInt(req.params.orderId);
-    console.log("[DELETE] Attempting to delete order:", orderId);
+    logger.info("[DELETE] Attempting to delete order:", orderId);
     if (!orderId) {
-      console.log("[DELETE] No orderId provided");
+      logger.info("[DELETE] No orderId provided");
       return res.status(400).json({ error: "orderId required" });
     }
 
@@ -21,7 +21,7 @@ exports.deleteOrder = async (req, res) => {
     });
 
     if (!existingOrder) {
-      console.log("[DELETE] Order not found:", orderId);
+      logger.info("[DELETE] Order not found:", orderId);
       return res.status(404).json({ error: "Order not found" });
     }
 
@@ -42,14 +42,14 @@ exports.deleteOrder = async (req, res) => {
     // Only deduct points if order wasn't already cancelled
     const shouldDeductPoints = existingOrder.status !== "cancelled";
 
-    console.log(`[DELETE] Order status: ${existingOrder.status}, Points to deduct: ${shouldDeductPoints ? loyaltyPointsEarned : 0}`);
+    logger.info(`[DELETE] Order status: ${existingOrder.status}, Points to deduct: ${shouldDeductPoints ? loyaltyPointsEarned : 0}`);
 
     // Delete order and deduct loyalty points in transaction
     let newLoyaltyBalance = null;
     await prisma.$transaction(async (tx) => {
       // Deduct loyalty points if order wasn't cancelled
       if (shouldDeductPoints && loyaltyPointsEarned > 0) {
-        console.log(`[DELETE] Deducting ${loyaltyPointsEarned} points from user ${existingOrder.userId}`);
+        logger.info(`[DELETE] Deducting ${loyaltyPointsEarned} points from user ${existingOrder.userId}`);
         const updatedUser = await tx.user.update({
           where: { id: existingOrder.userId },
           data: {
@@ -62,14 +62,14 @@ exports.deleteOrder = async (req, res) => {
           },
         });
         newLoyaltyBalance = updatedUser.loyaltyPoints;
-        console.log(`[DELETE] User's new loyalty points balance: ${newLoyaltyBalance}`);
+        logger.info(`[DELETE] User's new loyalty points balance: ${newLoyaltyBalance}`);
       }
 
       // Cascade delete will handle related OrderItems automatically
       await tx.order.delete({ where: { id: orderId } });
     });
 
-    console.log("[DELETE] Order deleted (cascade):", orderId);
+    logger.info("[DELETE] Order deleted (cascade):", orderId);
     
     if (newLoyaltyBalance === null) {
       const user = await prisma.user.findUnique({
@@ -77,7 +77,7 @@ exports.deleteOrder = async (req, res) => {
         select: { loyaltyPoints: true },
       });
       newLoyaltyBalance = user?.loyaltyPoints ?? null;
-      console.log(`[DELETE] (No deduction) Current user loyalty balance: ${newLoyaltyBalance}`);
+      logger.info(`[DELETE] (No deduction) Current user loyalty balance: ${newLoyaltyBalance}`);
     }
 
     res.json({
@@ -86,11 +86,12 @@ exports.deleteOrder = async (req, res) => {
       loyaltyPointsBalance: newLoyaltyBalance,
     });
   } catch (err) {
-    console.error("[DELETE] Error deleting order:", err);
+    logger.error("[DELETE] Error deleting order:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
 const { PrismaClient } = require("../generated/prisma");
+const logger = require('../utils/logger');
 const prisma = new PrismaClient();
 const {
   sendOrderStatusNotification,
@@ -108,9 +109,9 @@ exports.createOrder = async (req, res, next) => {
       });
     }
 
-    console.log("Full request body:", JSON.stringify(req.body, null, 2));
-    console.log("Raw request body type:", typeof req.body);
-    console.log(
+    logger.info("Full request body:", JSON.stringify(req.body, null, 2));
+    logger.info("Raw request body type:", typeof req.body);
+    logger.info(
       "Raw items type:",
       typeof req.body.items,
       "isArray:",
@@ -123,7 +124,7 @@ exports.createOrder = async (req, res, next) => {
     const userIdInt =
       typeof rawUserId === "number" ? rawUserId : parseInt(rawUserId, 10);
 
-    console.log(
+    logger.info(
       "Extracted userId:",
       userIdInt,
       "bodyUserId:",
@@ -141,7 +142,7 @@ exports.createOrder = async (req, res, next) => {
     } else if (typeof items === "object" && items !== null) {
       // Convert object with numeric keys to array
       processedItems = Object.values(items);
-      console.log("Converted object to array:", processedItems);
+      logger.info("Converted object to array:", processedItems);
     } else {
       processedItems = [];
     }
@@ -268,7 +269,7 @@ exports.createOrder = async (req, res, next) => {
           }),
     ]);
 
-    console.log("Order created successfully:", order.id);
+    logger.info("Order created successfully:", order.id);
     res.status(201).json({
       success: true,
       message: "Order created successfully",
@@ -278,7 +279,7 @@ exports.createOrder = async (req, res, next) => {
       orderTotal,
     });
   } catch (err) {
-    console.error("Create order error:", err);
+    logger.error("Create order error:", err);
     next(err);
   }
 };
@@ -312,7 +313,7 @@ exports.getUserOrders = async (req, res, next) => {
       });
     }
 
-    console.log("Fetching orders for user:", userId);
+    logger.info("Fetching orders for user:", userId);
 
     const orders = await prisma.order.findMany({
       where: { userId },
@@ -334,10 +335,10 @@ exports.getUserOrders = async (req, res, next) => {
       take: 50, // Limit to last 50 orders for performance
     });
 
-    console.log(`Found ${orders.length} orders for user ${userId}`);
+    logger.info(`Found ${orders.length} orders for user ${userId}`);
     res.json(orders);
   } catch (err) {
-    console.error("Get user orders error:", err);
+    logger.error("Get user orders error:", err);
     next(err);
   }
 };
@@ -349,7 +350,7 @@ exports.updateOrderStatus = async (req, res) => {
     const { validationResult } = require("express-validator");
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log("[UPDATE STATUS] Validation errors:", errors.array());
+      logger.info("[UPDATE STATUS] Validation errors:", errors.array());
       return res.status(400).json({
         error: "Validation failed",
         details: errors.array(),
@@ -359,7 +360,7 @@ exports.updateOrderStatus = async (req, res) => {
     const orderId = parseInt(req.params.orderId);
     const { status } = req.body;
     
-    console.log(`[UPDATE STATUS] Updating order ${orderId} to status: ${status}`);
+    logger.info(`[UPDATE STATUS] Updating order ${orderId} to status: ${status}`);
     
     const allowedStatuses = [
       "pending",
@@ -371,12 +372,12 @@ exports.updateOrderStatus = async (req, res) => {
     ];
     
     if (!orderId || !status) {
-      console.log("[UPDATE STATUS] Missing orderId or status");
+      logger.info("[UPDATE STATUS] Missing orderId or status");
       return res.status(400).json({ error: "orderId and status required" });
     }
     
     if (!allowedStatuses.includes(status)) {
-      console.log("[UPDATE STATUS] Invalid status:", status);
+      logger.info("[UPDATE STATUS] Invalid status:", status);
       return res
         .status(400).json({ error: "Invalid status value", allowed: allowedStatuses });
     }
@@ -394,7 +395,7 @@ exports.updateOrderStatus = async (req, res) => {
     });
 
     if (!existingOrder) {
-      console.log("[UPDATE STATUS] Order not found:", orderId);
+      logger.info("[UPDATE STATUS] Order not found:", orderId);
       return res.status(404).json({ error: "Order not found" });
     }
 
@@ -403,7 +404,7 @@ exports.updateOrderStatus = async (req, res) => {
       existingOrder.items.reduce((sum, item) => {
         const itemPrice = item.menuItem.price * item.quantity;
         const multiplier = item.loyaltyPointsMultiplier || 1.0;
-        console.log(`[UPDATE STATUS] Item: ${item.menuItem.name}, Price: ${item.menuItem.price}, Qty: ${item.quantity}, Multiplier: ${multiplier}, Points: ${itemPrice * multiplier}`);
+        logger.info(`[UPDATE STATUS] Item: ${item.menuItem.name}, Price: ${item.menuItem.price}, Qty: ${item.quantity}, Multiplier: ${multiplier}, Points: ${itemPrice * multiplier}`);
         return sum + (itemPrice * multiplier);
       }, 0)
     );
@@ -411,15 +412,15 @@ exports.updateOrderStatus = async (req, res) => {
     const loyaltyPointsAwarded = existingOrder.loyaltyPointsAwarded ?? 0;
     const loyaltyPointsToDeduct = loyaltyPointsAwarded > 0 ? loyaltyPointsAwarded : recalculatedPoints;
 
-    console.log(`[UPDATE STATUS] Stored loyalty points awarded: ${loyaltyPointsAwarded}, Recalculated: ${recalculatedPoints}`);
-    console.log(`[UPDATE STATUS] Total loyalty points to deduct: ${loyaltyPointsToDeduct}`);
-    console.log(`[UPDATE STATUS] Existing order status: ${existingOrder.status}, New status: ${status}`);
+    logger.info(`[UPDATE STATUS] Stored loyalty points awarded: ${loyaltyPointsAwarded}, Recalculated: ${recalculatedPoints}`);
+    logger.info(`[UPDATE STATUS] Total loyalty points to deduct: ${loyaltyPointsToDeduct}`);
+    logger.info(`[UPDATE STATUS] Existing order status: ${existingOrder.status}, New status: ${status}`);
 
     // If cancelling an order that wasn't already cancelled, deduct loyalty points
     const shouldDeductPoints =
       status === "cancelled" && existingOrder.status !== "cancelled";
 
-    console.log(`[UPDATE STATUS] Should deduct points: ${shouldDeductPoints}`);
+    logger.info(`[UPDATE STATUS] Should deduct points: ${shouldDeductPoints}`);
 
     // Update order status and handle loyalty points in transaction
     let updatedUser = null;
@@ -433,7 +434,7 @@ exports.updateOrderStatus = async (req, res) => {
 
       // Deduct loyalty points if cancelling
       if (shouldDeductPoints && loyaltyPointsToDeduct > 0) {
-        console.log(`[UPDATE STATUS] Deducting ${loyaltyPointsToDeduct} points from user ${existingOrder.userId}`);
+        logger.info(`[UPDATE STATUS] Deducting ${loyaltyPointsToDeduct} points from user ${existingOrder.userId}`);
         updatedUser = await tx.user.update({
           where: { id: existingOrder.userId },
           data: {
@@ -445,14 +446,14 @@ exports.updateOrderStatus = async (req, res) => {
             loyaltyPoints: true,
           },
         });
-        console.log(`[UPDATE STATUS] User's new loyalty points balance: ${updatedUser.loyaltyPoints}`);
+        logger.info(`[UPDATE STATUS] User's new loyalty points balance: ${updatedUser.loyaltyPoints}`);
       }
 
       return updatedOrder;
     });
 
-    console.log(`[UPDATE STATUS] Order ${orderId} updated to ${status}`);
-    console.log(`[UPDATE STATUS] Response - loyaltyPointsDeducted: ${shouldDeductPoints ? loyaltyPointsToDeduct : 0}, loyaltyPointsBalance: ${updatedUser?.loyaltyPoints}`);
+    logger.info(`[UPDATE STATUS] Order ${orderId} updated to ${status}`);
+    logger.info(`[UPDATE STATUS] Response - loyaltyPointsDeducted: ${shouldDeductPoints ? loyaltyPointsToDeduct : 0}, loyaltyPointsBalance: ${updatedUser?.loyaltyPoints}`);
 
     res.json({
       ...order,
@@ -463,7 +464,7 @@ exports.updateOrderStatus = async (req, res) => {
     // Send push notification for status change
     sendOrderStatusNotification(orderId, status);
   } catch (err) {
-    console.error("[UPDATE STATUS] Error:", err);
+    logger.error("[UPDATE STATUS] Error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -471,7 +472,7 @@ exports.updateOrderStatus = async (req, res) => {
 // Get all orders (admin)
 exports.getAllOrders = async (req, res) => {
   try {
-    console.log("Admin fetching all orders for user:", req.user);
+    logger.info("Admin fetching all orders for user:", req.user);
     const orders = await prisma.order.findMany({
       include: {
         user: true,
@@ -482,10 +483,10 @@ exports.getAllOrders = async (req, res) => {
       },
       orderBy: { createdAt: "desc" },
     });
-    console.log(`Found ${orders.length} orders for admin`);
+    logger.info(`Found ${orders.length} orders for admin`);
     res.json(orders);
   } catch (err) {
-    console.error("Get all orders error:", err);
+    logger.error("Get all orders error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -501,7 +502,7 @@ exports.getMyOrders = async (req, res, next) => {
     }
 
     const userId = req.user.userId;
-    console.log("Fetching orders for authenticated user:", userId);
+    logger.info("Fetching orders for authenticated user:", userId);
 
     const orders = await prisma.order.findMany({
       where: { userId },
@@ -522,10 +523,11 @@ exports.getMyOrders = async (req, res, next) => {
       take: 50, // Limit for performance
     });
 
-    console.log(`Found ${orders.length} orders for user ${userId}`);
+    logger.info(`Found ${orders.length} orders for user ${userId}`);
     res.json(orders);
   } catch (err) {
-    console.error("Get my orders error:", err);
+    logger.error("Get my orders error:", err);
     next(err);
   }
 };
+

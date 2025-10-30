@@ -1,4 +1,5 @@
-const { PrismaClient } = require("../generated/prisma");
+const { PrismaClient } = require('../generated/prisma');
+const logger = require('./logger');
 const prisma = new PrismaClient();
 
 /**
@@ -33,9 +34,9 @@ exports.cleanupTemporaryData = async (daysOld = 30) => {
       },
     });
 
-    console.log(`Cleanup completed:`);
-    console.log(`- Deleted ${deletedAddresses.count} temporary addresses`);
-    console.log(
+    logger.info(`Cleanup completed:`);
+    logger.info(`- Deleted ${deletedAddresses.count} temporary addresses`);
+    logger.info(
       `- Deleted ${deletedPaymentMethods.count} temporary payment methods`
     );
 
@@ -44,7 +45,7 @@ exports.cleanupTemporaryData = async (daysOld = 30) => {
       paymentMethods: deletedPaymentMethods.count,
     };
   } catch (err) {
-    console.error("Error during cleanup:", err);
+    logger.error("Error during cleanup:", err);
     throw err;
   }
 };
@@ -52,18 +53,19 @@ exports.cleanupTemporaryData = async (daysOld = 30) => {
 // If running this file directly for manual cleanup
 if (require.main === module) {
   const daysOld = process.argv[2] ? parseInt(process.argv[2]) : 30;
-  console.log(
+  logger.info(
     `Running cleanup for temporary data older than ${daysOld} days...`
   );
 
   exports
     .cleanupTemporaryData(daysOld)
     .then((result) => {
-      console.log("Cleanup successful:", result);
+      logger.info("Cleanup successful:", result);
       process.exit(0);
     })
     .catch((err) => {
-      console.error("Cleanup failed:", err);
+      logger.error("Cleanup failed:", err);
       process.exit(1);
     });
 }
+

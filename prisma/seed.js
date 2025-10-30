@@ -1,8 +1,9 @@
 const { PrismaClient } = require('../src/generated/prisma');
+const logger = require('../src/utils/logger');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Starting database seeding...');
+  logger.info('Starting database seeding...');
 
   // Create menu categories
   const categories = [
@@ -20,7 +21,7 @@ async function main() {
     { name: 'Cocktails' },
   ];
 
-  console.log('Creating categories...');
+  logger.info('Creating categories...');
   for (const category of categories) {
     const existing = await prisma.menuCategory.findFirst({
       where: { name: category.name }
@@ -509,7 +510,7 @@ async function main() {
     },
   ];
 
-  console.log('Creating menu items...');
+  logger.info('Creating menu items...');
   for (const item of menuItems) {
     const existing = await prisma.menuItem.findFirst({
       where: { 
@@ -524,14 +525,14 @@ async function main() {
     }
   }
 
-  console.log('✅ Database seeded successfully!');
-  console.log(`Created ${categories.length} categories`);
-  console.log(`Created ${menuItems.length} menu items`);
+  logger.info('✅ Database seeded successfully!');
+  logger.info(`Created ${categories.length} categories`);
+  logger.info(`Created ${menuItems.length} menu items`);
 }
 
 main()
   .catch((e) => {
-    console.error('Error seeding database:', e);
+    logger.error('Error seeding database:', e);
     process.exit(1);
   })
   .finally(async () => {

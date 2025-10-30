@@ -1,4 +1,5 @@
 const { PrismaClient } = require('../generated/prisma');
+const logger = require('../utils/logger');
 const prisma = new PrismaClient();
 const crypto = require('crypto');
 
@@ -73,7 +74,7 @@ exports.createToken = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Create token error:', error);
+    logger.error('Create token error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create token'
@@ -180,7 +181,7 @@ exports.redeemToken = async (req, res) => {
       message: `${token.points} Treuepunkte erfolgreich gutgeschrieben!`
     });
   } catch (error) {
-    console.error('Redeem token error:', error);
+    logger.error('Redeem token error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to redeem token',
@@ -260,7 +261,7 @@ exports.listTokens = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('List tokens error:', error);
+    logger.error('List tokens error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to list tokens'
@@ -290,7 +291,7 @@ exports.deactivateToken = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Deactivate token error:', error);
+    logger.error('Deactivate token error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to deactivate token'
@@ -340,10 +341,11 @@ exports.getToken = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get token error:', error);
+    logger.error('Get token error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get token'
     });
   }
 };
+

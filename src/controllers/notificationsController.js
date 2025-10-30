@@ -1,4 +1,5 @@
 const { PrismaClient } = require("../generated/prisma");
+const logger = require('../utils/logger');
 const prisma = new PrismaClient();
 
 // Register push token
@@ -18,7 +19,7 @@ exports.registerPushToken = async (req, res) => {
 
     res.json({ message: "Push token registered successfully" });
   } catch (err) {
-    console.error("Register push token error:", err);
+    logger.error("Register push token error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 };
@@ -32,7 +33,7 @@ async function sendPushNotification(userId, title, body, data = {}) {
     });
 
     if (!user || !user.pushToken) {
-      console.log(`No push token for user ${userId}`);
+      logger.info(`No push token for user ${userId}`);
       return;
     }
 
@@ -56,9 +57,9 @@ async function sendPushNotification(userId, title, body, data = {}) {
     });
 
     const result = await response.json();
-    console.log("Push notification sent:", result);
+    logger.info("Push notification sent:", result);
   } catch (err) {
-    console.error("Error sending push notification:", err);
+    logger.error("Error sending push notification:", err);
   }
 }
 
@@ -89,7 +90,7 @@ exports.sendOrderStatusNotification = async (orderId, status) => {
       );
     }
   } catch (err) {
-    console.error("Error sending order notification:", err);
+    logger.error("Error sending order notification:", err);
   }
 };
 
@@ -98,3 +99,4 @@ module.exports = {
   sendOrderStatusNotification: exports.sendOrderStatusNotification,
   sendPushNotification,
 };
+

@@ -1,4 +1,5 @@
 const { PrismaClient } = require('../generated/prisma');
+const logger = require('../utils/logger');
 const prisma = new PrismaClient();
 
 // Get a specific setting by key
@@ -16,7 +17,7 @@ const getSetting = async (req, res) => {
 
     res.json(setting);
   } catch (error) {
-    console.error('Error fetching setting:', error);
+    logger.error('Error fetching setting:', error);
     res.status(500).json({ error: 'Failed to fetch setting' });
   }
 };
@@ -30,7 +31,7 @@ const getAllSettings = async (req, res) => {
 
     res.json(settings);
   } catch (error) {
-    console.error('Error fetching settings:', error);
+    logger.error('Error fetching settings:', error);
     res.status(500).json({ error: 'Failed to fetch settings' });
   }
 };
@@ -61,7 +62,7 @@ const updateSetting = async (req, res) => {
 
     res.json(setting);
   } catch (error) {
-    console.error('Error updating setting:', error);
+    logger.error('Error updating setting:', error);
     res.status(500).json({ error: 'Failed to update setting' });
   }
 };
@@ -77,7 +78,7 @@ const deleteSetting = async (req, res) => {
 
     res.json({ message: 'Setting deleted successfully' });
   } catch (error) {
-    console.error('Error deleting setting:', error);
+    logger.error('Error deleting setting:', error);
     res.status(500).json({ error: 'Failed to delete setting' });
   }
 };
@@ -88,3 +89,4 @@ module.exports = {
   updateSetting,
   deleteSetting
 };
+

@@ -1,4 +1,5 @@
 const { PrismaClient } = require('../src/generated/prisma');
+const logger = require('../src/utils/logger');
 
 async function main() {
   const prisma = new PrismaClient();
@@ -15,9 +16,9 @@ async function main() {
         0
       );
     `);
-    console.log(`Backfill complete. Rows affected: ${result}`);
+    logger.info(`Backfill complete. Rows affected: ${result}`);
   } catch (error) {
-    console.error('Error backfilling loyaltyPointsAwarded:', error);
+    logger.error('Error backfilling loyaltyPointsAwarded:', error);
   } finally {
     await prisma.$disconnect();
   }

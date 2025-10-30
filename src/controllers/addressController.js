@@ -1,4 +1,5 @@
 const { PrismaClient } = require("../generated/prisma");
+const logger = require('../utils/logger');
 const prisma = new PrismaClient();
 
 // Create Address
@@ -12,8 +13,8 @@ exports.createAddress = async (req, res) => {
       phone,
       saveToProfile = true,
     } = req.body;
-    console.log("[DEBUG] req.user:", req.user);
-    console.log("[DEBUG] saveToProfile:", saveToProfile);
+    logger.info("[DEBUG] req.user:", req.user);
+    logger.info("[DEBUG] saveToProfile:", saveToProfile);
     const userId = req.user.userId;
 
     // Create the address
@@ -77,3 +78,4 @@ exports.deleteAddress = async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 };
+
