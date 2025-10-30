@@ -105,7 +105,7 @@ exports.redeemToken = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Invalid token',
-        message: 'Ungültiger QR-Code'
+        message: 'Invalid QR code'
       });
     }
 
@@ -114,7 +114,7 @@ exports.redeemToken = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Token inactive',
-        message: 'Dieser QR-Code wurde deaktiviert'
+        message: 'This QR code has been deactivated'
       });
     }
 
@@ -123,7 +123,7 @@ exports.redeemToken = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Token expired',
-        message: 'Dieser QR-Code ist abgelaufen'
+        message: 'This QR code has expired'
       });
     }
 
@@ -132,7 +132,7 @@ exports.redeemToken = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Already redeemed',
-        message: 'Sie haben diesen QR-Code bereits eingelöst'
+        message: 'You have already redeemed this QR code'
       });
     }
 
@@ -141,7 +141,7 @@ exports.redeemToken = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Already redeemed',
-        message: 'Dieser QR-Code wurde bereits eingelöst'
+        message: 'This QR code has already been redeemed'
       });
     }
 
