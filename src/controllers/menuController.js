@@ -462,14 +462,18 @@ exports.createMenuItem = async (req, res) => {
   try {
     const { name, nameEn, nameDe, description, descriptionEn, descriptionDe, price, categoryId, loyaltyPointsMultiplier, imageUrl } = req.body;
 
+    // German is required (use as default), English is optional
+    const finalNameDe = nameDe || name;
+    const finalDescriptionDe = descriptionDe || description;
+
     const menuItem = await prisma.menuItem.create({
       data: {
-        name,
-        nameEn: nameEn || name,
-        nameDe: nameDe || name,
-        description,
-        descriptionEn: descriptionEn || description,
-        descriptionDe: descriptionDe || description,
+        name: finalNameDe, // Use German as default name
+        nameEn: nameEn || null,
+        nameDe: finalNameDe,
+        description: finalDescriptionDe, // Use German as default description
+        descriptionEn: descriptionEn || null,
+        descriptionDe: finalDescriptionDe,
         price: parseFloat(price),
         categoryId: parseInt(categoryId),
         loyaltyPointsMultiplier: loyaltyPointsMultiplier ? parseFloat(loyaltyPointsMultiplier) : 1.0,
@@ -494,15 +498,17 @@ exports.updateMenuItem = async (req, res) => {
     const itemId = parseInt(req.params.id);
     const { name, nameEn, nameDe, description, descriptionEn, descriptionDe, price, categoryId, loyaltyPointsMultiplier, imageUrl } = req.body;
 
+    // German is required (use as default), English is optional
+    const finalNameDe = nameDe || name;
+    const finalDescriptionDe = descriptionDe || description;
+
     const menuItem = await prisma.menuItem.update({
       where: { id: itemId },
       data: {
-        ...(name && { name }),
-        ...(nameEn && { nameEn }),
-        ...(nameDe && { nameDe }),
-        ...(description && { description }),
-        ...(descriptionEn && { descriptionEn }),
-        ...(descriptionDe && { descriptionDe }),
+        ...(finalNameDe && { name: finalNameDe, nameDe: finalNameDe }),
+        ...(nameEn !== undefined && { nameEn: nameEn || null }),
+        ...(finalDescriptionDe && { description: finalDescriptionDe, descriptionDe: finalDescriptionDe }),
+        ...(descriptionEn !== undefined && { descriptionEn: descriptionEn || null }),
         ...(price && { price: parseFloat(price) }),
         ...(categoryId && { categoryId: parseInt(categoryId) }),
         ...(loyaltyPointsMultiplier && { loyaltyPointsMultiplier: parseFloat(loyaltyPointsMultiplier) }),
