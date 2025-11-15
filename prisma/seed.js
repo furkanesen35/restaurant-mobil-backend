@@ -525,6 +525,21 @@ async function main() {
     }
   }
 
+  // Create default settings
+  logger.info('Creating default settings...');
+  const minOrderValue = await prisma.settings.findUnique({
+    where: { key: 'minOrderValue' }
+  });
+  if (!minOrderValue) {
+    await prisma.settings.create({
+      data: {
+        key: 'minOrderValue',
+        value: '10.00',
+        description: 'Minimum order value in EUR'
+      }
+    });
+  }
+
   logger.info('✅ Database seeded successfully!');
   logger.info(`Created ${categories.length} categories`);
   logger.info(`Created ${menuItems.length} menu items`);
