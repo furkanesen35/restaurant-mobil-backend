@@ -59,7 +59,7 @@ async function main() {
       descriptionDe: 'Knusprige Falafel',
       price: 8.80,
       categoryId: appetizer.id,
-      imageUrl: 'https://images.unsplash.com/photo-1608039829574-6fff1e77c648?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1558458601-0d69a278b8e6?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       isVegetarian: true,
       isVegan: true,
     },
@@ -72,7 +72,7 @@ async function main() {
       descriptionDe: 'Knusprig frittierte Zwiebelblume',
       price: 4.70,
       categoryId: appetizer.id,
-      imageUrl: 'https://images.unsplash.com/photo-1505575967455-40e256f73376?w=800&q=80',
+      imageUrl: 'https://media.istockphoto.com/id/896419628/de/foto/bl%C3%BChende-zwiebeln.jpg?s=1024x1024&w=is&k=20&c=YivLjVJO2JQfwSSdTk_O99fL69pYtgZnP5W0zyhTfT8=',
       isVegetarian: true,
     },
     {
@@ -96,7 +96,7 @@ async function main() {
       descriptionDe: 'Mit Salat, Guacamole und 120g Steak',
       price: 9.70,
       categoryId: appetizer.id,
-      imageUrl: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1667608929017-e5aa9f642be8?q=80&w=1632&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
       name: 'Tortilla Wrap mit Hähnchen',
@@ -107,7 +107,7 @@ async function main() {
       descriptionDe: 'Mit Salat, Guacamole und 120g Hähnchen',
       price: 9.70,
       categoryId: appetizer.id,
-      imageUrl: 'https://images.unsplash.com/photo-1540206351-d6465b3ac1ad?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=800&q=80',
     },
     {
       name: 'Tortilla Wrap mit Falafel',
@@ -118,7 +118,7 @@ async function main() {
       descriptionDe: 'Mit Salat, Guacamole und Falafel',
       price: 8.70,
       categoryId: appetizer.id,
-      imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80',
+      imageUrl: 'https://media.istockphoto.com/id/526142156/de/foto/vegetarische-falafel-packungen.jpg?s=2048x2048&w=is&k=20&c=kfIbBfI0yA-KA7GqGxx9roC1FC-UtRXyEc3H-7hXFZc=',
       isVegetarian: true,
     },
     {
@@ -130,7 +130,7 @@ async function main() {
       descriptionDe: '5 Stück knusprige Chicken Wings',
       price: 6.20,
       categoryId: appetizer.id,
-      imageUrl: 'https://images.unsplash.com/photo-1608039755401-742074f0548d?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1645371958635-88dd6c8e1be7?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
 
     // DIPS & TOPPINGS
@@ -143,7 +143,7 @@ async function main() {
       descriptionDe: 'Knoblauch-Mayonnaise',
       price: 1.40,
       categoryId: dips.id,
-      imageUrl: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&q=80',
+      imageUrl: 'https://media.istockphoto.com/id/1997227395/de/foto/aioli-sauce-nahaufnahme-mit-zutaten-auf-betonhintergrund-seitenansicht-selektiver-fokus.jpg?s=2048x2048&w=is&k=20&c=2OlzJJuf4J_-nRTiyXFggbEvG7KZpWfWvfeW_QWpbYE=',
       isVegetarian: true,
     },
     {
@@ -155,7 +155,7 @@ async function main() {
       descriptionDe: 'Rauchige Barbecue-Sauce',
       price: 1.40,
       categoryId: dips.id,
-      imageUrl: 'https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?w=800&q=80',
+      imageUrl: 'https://plus.unsplash.com/premium_photo-1695865411429-fc175f8d408d?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       isVegetarian: true,
     },
     {
@@ -167,7 +167,7 @@ async function main() {
       descriptionDe: 'Frische Avocado-Creme',
       price: 2.20,
       categoryId: dips.id,
-      imageUrl: 'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?w=800&q=80',
+      imageUrl: 'https://plus.unsplash.com/premium_photo-1681406689584-2f7612fa98a4?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       isVegetarian: true,
       isVegan: true,
     },
@@ -180,7 +180,7 @@ async function main() {
       descriptionDe: 'Hauseigene Whiskey-Sauce',
       price: 2.20,
       categoryId: dips.id,
-      imageUrl: 'https://images.unsplash.com/photo-1460306855393-0410f61241c7?w=800&q=80',
+      imageUrl: 'https://media.istockphoto.com/id/502993793/de/foto/whisky-sauce.jpg?s=2048x2048&w=is&k=20&c=xMAS2rtz6kiQSrsN9aS13tGWTirEtb0_8b40VYS3MAY=',
     },
     {
       name: 'Sour Cream',
@@ -191,7 +191,7 @@ async function main() {
       descriptionDe: 'Kräutersauerrahm',
       price: 1.40,
       categoryId: dips.id,
-      imageUrl: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=800&q=80',
+      imageUrl: 'https://media.istockphoto.com/id/497100969/de/foto/sch%C3%BCssel-mit-creme-fra%C3%ADche.jpg?s=2048x2048&w=is&k=20&c=cL9IKcm8AQ69Y-kGRY3kF0-_d5O9HO429LuUcXim2W8=',
       isVegetarian: true,
     },
     {
@@ -203,7 +203,7 @@ async function main() {
       descriptionDe: 'Hauseigene Burgersauce',
       price: 1.40,
       categoryId: dips.id,
-      imageUrl: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&q=80',
+      imageUrl: 'https://media.istockphoto.com/id/1195877732/de/foto/leckere-burgersauce-in-sch%C3%BCssel-isoliert-auf-wei%C3%9Fem-hintergrund.jpg?s=612x612&w=0&k=20&c=-sxR1q3Q3TYu5SIEMwq6E35eKyxQGF8sE6V7msHzdOg=',
       isVegetarian: true,
     },
 
@@ -240,7 +240,7 @@ async function main() {
       descriptionDe: '300g Schmitzz Fritten mit Currywurstscheiben und Currysauce',
       price: 8.70,
       categoryId: fritten.id,
-      imageUrl: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1561701034-24ceb3e34433?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
       name: 'Pulled Pork Fritten',
@@ -251,7 +251,7 @@ async function main() {
       descriptionDe: '300g Schmitzz Fritten mit Pulled Pork, Coleslaw und Sour Cream',
       price: 9.80,
       categoryId: fritten.id,
-      imageUrl: 'https://images.unsplash.com/photo-1514517220017-8ce97aa164bf?w=800&q=80',
+      imageUrl: 'https://media.istockphoto.com/id/2205917521/de/foto/pulled-pork-burger-with-french-fries.jpg?s=2048x2048&w=is&k=20&c=mAu5qPGpIs2WWcQNpDA64C-mFmD1msg1NTaDLILzQvg=',
     },
     {
       name: 'Chili-Cheese Fritten',
@@ -262,7 +262,7 @@ async function main() {
       descriptionDe: '300g Schmitzz Fritten mit Chili-Cheese-Sauce und Sour Cream',
       price: 7.80,
       categoryId: fritten.id,
-      imageUrl: 'https://images.unsplash.com/photo-1499028344343-cd173ffc68a9?w=800&q=80',
+      imageUrl: 'https://media.istockphoto.com/id/1724104073/de/foto/chili-k%C3%A4se-kartoffel-pommes-mit-hei%C3%9Fem-rinderhackfleisch-und-k%C3%A4sesauce.jpg?s=612x612&w=0&k=20&c=EmnvPQ2knQxAcdLjQo1tDyAgmb-gwtXtzoqh6wtfE84=',
       isVegetarian: true,
     },
 
@@ -386,7 +386,7 @@ async function main() {
       descriptionDe: '200g Fischpatty, Sour Cream, Friséesalat, Tomate',
       price: 12.30,
       categoryId: burger.id,
-      imageUrl: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=800&q=80',
+      imageUrl: 'https://media.istockphoto.com/id/1194903705/de/foto/nahaufnahme-von-hausgemachten-burgern-frisch-leckeren-cheeseburger.jpg?s=612x612&w=0&k=20&c=rXYvfbroeRToE6ZobRjx_GyY-ftPnko9KVYsux9riJo=',
     },
 
     // VEGGIE & VEGANE BURGER
@@ -411,7 +411,7 @@ async function main() {
       descriptionDe: '200g veganes Patty, Champignons, Kidneybohnen, Friséesalat',
       price: 10.90,
       categoryId: veggie.id,
-      imageUrl: 'https://images.unsplash.com/photo-1612198527556-aa397176c3f0?w=800&q=80',
+      imageUrl: 'https://plus.unsplash.com/premium_photo-1664648063600-249e75fa7fd7?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       isVegetarian: true,
       isVegan: true,
     },
@@ -451,7 +451,7 @@ async function main() {
       descriptionDe: 'Süßkartoffel Pommes',
       price: 4.60,
       categoryId: beilagen.id,
-      imageUrl: 'https://images.unsplash.com/photo-1502740479091-635887520276?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1598679253544-2c97992403ea?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8ZnJpZXN8ZW58MHx8MHx8fDA%3D',
       isVegetarian: true,
       isVegan: true,
     },
@@ -490,7 +490,7 @@ async function main() {
       descriptionDe: 'Curry Couscous, Salatmix, gebratene Garnelen, Curry-Mango-Dip',
       price: 14.60,
       categoryId: bowls.id,
-      imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1602881917760-7379db593981?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8c2hyaW1wJTIwYm93bHxlbnwwfHwwfHx8MA%3D%3D',
     },
 
     // DESSERTS
@@ -503,7 +503,7 @@ async function main() {
       descriptionDe: 'Mit einer Kugel Vanilleeis und auf Wunsch mit Sahne',
       price: 5.30,
       categoryId: desserts.id,
-      imageUrl: 'https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1676300185983-d5f242babe34?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Y2hlZXNlY2FrZXxlbnwwfHwwfHx8MA%3D%3D',
       isVegetarian: true,
     },
     {
@@ -542,7 +542,7 @@ async function main() {
       descriptionDe: 'Erfrischende Cola (0,2L)',
       price: 3.20,
       categoryId: drinks.id,
-      imageUrl: 'https://images.unsplash.com/photo-1510626176961-4b57d4fbad03?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       isVegetarian: true,
       isVegan: true,
     },
@@ -555,7 +555,7 @@ async function main() {
       descriptionDe: 'Viel viel Koffein (0,2L)',
       price: 3.20,
       categoryId: drinks.id,
-      imageUrl: 'https://images.unsplash.com/photo-1541971875078-28036ff16ee5?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1658238123377-f522e0906f5c?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8ZnJpdHolMjBrb2xhfGVufDB8fDB8fHww',
       isVegetarian: true,
       isVegan: true,
     },
@@ -568,7 +568,7 @@ async function main() {
       descriptionDe: 'Frischer Apfelsaft (0,3L)',
       price: 3.00,
       categoryId: drinks.id,
-      imageUrl: 'https://images.unsplash.com/photo-1542444459-db68f1f1cf98?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1727989815707-1b9e8f376775?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fGFwcGxlJTIwanVpY2V8ZW58MHx8MHx8fDA%3D',
       isVegetarian: true,
       isVegan: true,
     },
@@ -594,7 +594,7 @@ async function main() {
       descriptionDe: 'Mineralwasser mit Kohlensäure (0,25L)',
       price: 3.10,
       categoryId: drinks.id,
-      imageUrl: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1564919415179-752ca9dadcdf?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fG1pbmVyYWwlMjB3YXRlcnxlbnwwfHwwfHx8MA%3D%3D',
       isVegetarian: true,
       isVegan: true,
     },
