@@ -20,38 +20,39 @@ exports.sendVerificationEmail = async (req, res, next) => {
       where: { email },
       data: { verificationToken: token },
     });
-    const verifyUrl = `http://192.168.1.110:8081/verify-email?token=${token}`;
-    await sendMail({
-      to: email,
-      subject: "Verify Your Email - Restaurant App",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h2 style="color: #333; text-align: center; margin-bottom: 20px;">🎉 Welcome to Restaurant App!</h2>
-            <p style="color: #666; font-size: 16px; line-height: 1.6; text-align: center;">Thank you for creating an account!</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${verifyUrl}" style="background-color: #4CAF50; color: white; padding: 14px 28px; text-decoration: none; border-radius: 5px; font-size: 18px; font-weight: bold; display: inline-block;">Verify Email</a>
-            </div>
-            <div style="background-color: #e8f5e9; border-left: 4px solid #4CAF50; padding: 15px; margin: 25px 0;">
-              <p style="color: #333; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">Or use this code in the app:</p>
-              <div style="background-color: white; padding: 15px; border-radius: 5px; text-align: center; border: 2px dashed #4CAF50;">
-                <code style="color: #4CAF50; font-size: 18px; font-weight: bold; letter-spacing: 2px; word-break: break-all;">${token}</code>
-              </div>
-            </div>
-            <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <p style="color: #333; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">📱 How to verify your email:</p>
-              <ol style="color: #666; font-size: 14px; margin: 0; padding-left: 20px;">
-                <li style="margin-bottom: 8px;">Click the button above (recommended)</li>
-                <li style="margin-bottom: 8px;">Or copy and paste the code above in the app</li>
-                <li>Tap "Verify Email"</li>
-              </ol>
-            </div>
-            <p style="color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">If you didn't create an account, please ignore this email.</p>
-          </div>
-        </div>
-      `,
-    });
-    res.json({ message: "Verification email sent" });
+    // Temporarily disabled email sending to avoid SMTP dependency
+    // const verifyUrl = `http://192.168.1.110:8081/verify-email?token=${token}`;
+    // await sendMail({
+    //   to: email,
+    //   subject: "Verify Your Email - Restaurant App",
+    //   html: `
+    //     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+    //       <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    //         <h2 style="color: #333; text-align: center; margin-bottom: 20px;">🎉 Welcome to Restaurant App!</h2>
+    //         <p style="color: #666; font-size: 16px; line-height: 1.6; text-align: center;">Thank you for creating an account!</p>
+    //         <div style="text-align: center; margin: 30px 0;">
+    //           <a href="${verifyUrl}" style="background-color: #4CAF50; color: white; padding: 14px 28px; text-decoration: none; border-radius: 5px; font-size: 18px; font-weight: bold; display: inline-block;">Verify Email</a>
+    //         </div>
+    //         <div style="background-color: #e8f5e9; border-left: 4px solid #4CAF50; padding: 15px; margin: 25px 0;">
+    //           <p style="color: #333; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">Or use this code in the app:</p>
+    //           <div style="background-color: white; padding: 15px; border-radius: 5px; text-align: center; border: 2px dashed #4CAF50;">
+    //             <code style="color: #4CAF50; font-size: 18px; font-weight: bold; letter-spacing: 2px; word-break: break-all;">${token}</code>
+    //           </div>
+    //         </div>
+    //         <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    //           <p style="color: #333; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">📱 How to verify your email:</p>
+    //           <ol style="color: #666; font-size: 14px; margin: 0; padding-left: 20px;">
+    //             <li style="margin-bottom: 8px;">Click the button above (recommended)</li>
+    //             <li style="margin-bottom: 8px;">Or copy and paste the code above in the app</li>
+    //             <li>Tap "Verify Email"</li>
+    //           </ol>
+    //         </div>
+    //         <p style="color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">If you didn't create an account, please ignore this email.</p>
+    //       </div>
+    //     </div>
+    //   `,
+    // });
+    res.json({ message: "Verification email sent (skipped)", token });
   } catch (err) {
     logger.error("Send verification email error", { error: err.message });
     next(err);
@@ -95,39 +96,40 @@ exports.forgotPassword = async (req, res, next) => {
         resetTokenExpiry: new Date(Date.now() + 3600 * 1000),
       },
     });
-    const resetUrl = `http://192.168.1.110:8081/reset-password?token=${token}`;
-    await sendMail({
-      to: email,
-      subject: "Password Reset - Restaurant App",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h2 style="color: #333; text-align: center; margin-bottom: 20px;">Password Reset Request</h2>
-            <p style="color: #666; font-size: 16px; line-height: 1.6;">You requested to reset your password for your Restaurant App account.</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="background-color: #FF6B35; color: white; padding: 14px 28px; text-decoration: none; border-radius: 5px; font-size: 18px; font-weight: bold; display: inline-block;">Reset Password</a>
-            </div>
-            <div style="background-color: #fff3e0; border-left: 4px solid #FF6B35; padding: 15px; margin: 25px 0;">
-              <p style="color: #333; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">Or use this code in the app:</p>
-              <div style="background-color: white; padding: 15px; border-radius: 5px; text-align: center; border: 2px dashed #FF6B35;">
-                <code style="color: #FF6B35; font-size: 18px; font-weight: bold; letter-spacing: 2px; word-break: break-all;">${token}</code>
-              </div>
-            </div>
-            <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <p style="color: #333; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">📱 How to reset your password:</p>
-              <ol style="color: #666; font-size: 14px; margin: 0; padding-left: 20px;">
-                <li style="margin-bottom: 8px;">Click the button above (recommended)</li>
-                <li style="margin-bottom: 8px;">Or copy and paste the code above in the app</li>
-                <li>Enter your new password</li>
-              </ol>
-            </div>
-            <p style="color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">⏰ This code expires in 1 hour</p>
-            <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email and your password will remain unchanged.</p>
-          </div>
-        </div>
-      `,
-    });
-    res.json({ message: "Password reset email sent" });
+    // Temporarily disabled email sending to avoid SMTP dependency
+    // const resetUrl = `http://192.168.1.110:8081/reset-password?token=${token}`;
+    // await sendMail({
+    //   to: email,
+    //   subject: "Password Reset - Restaurant App",
+    //   html: `
+    //     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+    //       <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    //         <h2 style="color: #333; text-align: center; margin-bottom: 20px;">Password Reset Request</h2>
+    //         <p style="color: #666; font-size: 16px; line-height: 1.6;">You requested to reset your password for your Restaurant App account.</p>
+    //         <div style="text-align: center; margin: 30px 0;">
+    //           <a href="${resetUrl}" style="background-color: #FF6B35; color: white; padding: 14px 28px; text-decoration: none; border-radius: 5px; font-size: 18px; font-weight: bold; display: inline-block;">Reset Password</a>
+    //         </div>
+    //         <div style="background-color: #fff3e0; border-left: 4px solid #FF6B35; padding: 15px; margin: 25px 0;">
+    //           <p style="color: #333; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">Or use this code in the app:</p>
+    //           <div style="background-color: white; padding: 15px; border-radius: 5px; text-align: center; border: 2px dashed #FF6B35;">
+    //             <code style="color: #FF6B35; font-size: 18px; font-weight: bold; letter-spacing: 2px; word-break: break-all;">${token}</code>
+    //           </div>
+    //         </div>
+    //         <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    //           <p style="color: #333; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">📱 How to reset your password:</p>
+    //           <ol style="color: #666; font-size: 14px; margin: 0; padding-left: 20px;">
+    //             <li style="margin-bottom: 8px;">Click the button above (recommended)</li>
+    //             <li style="margin-bottom: 8px;">Or copy and paste the code above in the app</li>
+    //             <li>Enter your new password</li>
+    //           </ol>
+    //         </div>
+    //         <p style="color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">⏰ This code expires in 1 hour</p>
+    //         <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email and your password will remain unchanged.</p>
+    //       </div>
+    //     </div>
+    //   `,
+    // });
+    res.json({ message: "Password reset email sent (skipped)", token });
   } catch (err) {
     logger.error("Forgot password error", { error: err.message });
     next(err);
