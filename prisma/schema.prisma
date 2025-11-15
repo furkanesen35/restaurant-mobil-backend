@@ -68,15 +68,21 @@ model PaymentMethod {
 }
 
 model MenuCategory {
-  id    Int    @id @default(autoincrement())
-  name  String
-  items MenuItem[]
+  id      Int    @id @default(autoincrement())
+  name    String
+  nameEn  String?
+  nameDe  String?
+  items   MenuItem[]
 }
 
 model MenuItem {
   id          Int    @id @default(autoincrement())
   name        String
+  nameEn      String?
+  nameDe      String?
   description String?
+  descriptionEn String?
+  descriptionDe String?
   price       Float
   category    MenuCategory @relation(fields: [categoryId], references: [id])
   categoryId  Int

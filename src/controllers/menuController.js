@@ -11,6 +11,7 @@ exports.getMenu = async (req, res) => {
       isVegan,
       isGlutenFree,
       isSpicy,
+      lang = 'de', // Default to German
     } = req.query;
 
     // Build filter conditions
@@ -37,8 +38,10 @@ exports.getMenu = async (req, res) => {
     }
 
     if (search) {
+      const langField = lang === 'en' ? 'nameEn' : 'nameDe';
       itemFilters.OR = [
         { name: { contains: search, mode: "insensitive" } },
+        { [langField]: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
       ];
     }
@@ -51,17 +54,28 @@ exports.getMenu = async (req, res) => {
       },
     });
 
+    // Helper function to get localized text
+    const getLocalizedText = (item, field) => {
+      if (lang === 'en' && item[`${field}En`]) {
+        return item[`${field}En`];
+      }
+      if (lang === 'de' && item[`${field}De`]) {
+        return item[`${field}De`];
+      }
+      return item[field]; // Fallback to default
+    };
+
     // Convert IDs to strings for frontend compatibility
     const categories = rawCategories.map((c) => ({
       id: c.id.toString(),
-      name: c.name,
+      name: getLocalizedText(c, 'name'),
     }));
 
     const items = rawCategories.flatMap((c) =>
       (c.items || []).map((item) => ({
         id: item.id.toString(),
-        name: item.name,
-        description: item.description || "",
+        name: getLocalizedText(item, 'name'),
+        description: getLocalizedText(item, 'description') || "",
         price: item.price,
         category: c.id.toString(),
         imageUrl: item.imageUrl,
@@ -75,7 +89,7 @@ exports.getMenu = async (req, res) => {
     );
 
     logger.info(
-      `Sending menu data: ${categories.length} categories, ${items.length} items (filters applied: ${Object.keys(itemFilters).length})`
+      `Sending menu data (lang: ${lang}): ${categories.length} categories, ${items.length} items (filters applied: ${Object.keys(itemFilters).length})`
     );
     res.json({ categories, items });
   } catch (err) {
