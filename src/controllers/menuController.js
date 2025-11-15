@@ -460,15 +460,20 @@ exports.seedMenu = async (req, res) => {
 // Create new menu item (admin only)
 exports.createMenuItem = async (req, res) => {
   try {
-    const { name, description, price, categoryId, loyaltyPointsMultiplier } = req.body;
+    const { name, nameEn, nameDe, description, descriptionEn, descriptionDe, price, categoryId, loyaltyPointsMultiplier, imageUrl } = req.body;
 
     const menuItem = await prisma.menuItem.create({
       data: {
         name,
+        nameEn: nameEn || name,
+        nameDe: nameDe || name,
         description,
+        descriptionEn: descriptionEn || description,
+        descriptionDe: descriptionDe || description,
         price: parseFloat(price),
         categoryId: parseInt(categoryId),
         loyaltyPointsMultiplier: loyaltyPointsMultiplier ? parseFloat(loyaltyPointsMultiplier) : 1.0,
+        imageUrl: imageUrl || null,
       },
     });
 
@@ -487,16 +492,21 @@ exports.createMenuItem = async (req, res) => {
 exports.updateMenuItem = async (req, res) => {
   try {
     const itemId = parseInt(req.params.id);
-    const { name, description, price, categoryId, loyaltyPointsMultiplier } = req.body;
+    const { name, nameEn, nameDe, description, descriptionEn, descriptionDe, price, categoryId, loyaltyPointsMultiplier, imageUrl } = req.body;
 
     const menuItem = await prisma.menuItem.update({
       where: { id: itemId },
       data: {
         ...(name && { name }),
+        ...(nameEn && { nameEn }),
+        ...(nameDe && { nameDe }),
         ...(description && { description }),
+        ...(descriptionEn && { descriptionEn }),
+        ...(descriptionDe && { descriptionDe }),
         ...(price && { price: parseFloat(price) }),
         ...(categoryId && { categoryId: parseInt(categoryId) }),
         ...(loyaltyPointsMultiplier && { loyaltyPointsMultiplier: parseFloat(loyaltyPointsMultiplier) }),
+        ...(imageUrl !== undefined && { imageUrl }),
       },
     });
 
