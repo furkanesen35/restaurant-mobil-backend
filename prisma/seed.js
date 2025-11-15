@@ -820,19 +820,15 @@ async function main() {
     },
   ];
 
+  // Delete existing menu items to ensure fresh data
+  logger.info('Deleting existing menu items...');
+  await prisma.menuItem.deleteMany({});
+
   logger.info('Creating menu items...');
   for (const item of menuItems) {
-    const existing = await prisma.menuItem.findFirst({
-      where: { 
-        name: item.name,
-        categoryId: item.categoryId
-      }
+    await prisma.menuItem.create({
+      data: item,
     });
-    if (!existing) {
-      await prisma.menuItem.create({
-        data: item,
-      });
-    }
   }
 
   // Create default settings
