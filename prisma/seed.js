@@ -609,7 +609,7 @@ async function main() {
       descriptionDe: 'Bayerisches helles Bier (0,5L)',
       price: 5.30,
       categoryId: bier.id,
-      imageUrl: 'https://images.unsplash.com/photo-1527169402691-feff5539e52c?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=800&q=80',
       isVegetarian: true,
       isVegan: true,
     },
@@ -648,7 +648,7 @@ async function main() {
       descriptionDe: 'Mexikanisches Bier (0,33L)',
       price: 3.90,
       categoryId: bier.id,
-      imageUrl: 'https://images.unsplash.com/photo-1613478881950-0a5499a20e0a?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=800&q=80',
       isVegetarian: true,
       isVegan: true,
     },
@@ -689,7 +689,7 @@ async function main() {
       descriptionDe: 'Weißwein halbtrocken (0,2L)',
       price: 6.90,
       categoryId: wein.id,
-      imageUrl: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1474722883778-ab3ea49ccbde?w=800&q=80',
       isVegetarian: true,
       isVegan: true,
     },
@@ -728,7 +728,7 @@ async function main() {
       descriptionDe: 'Schaumwein herb (0,1L)',
       price: 4.80,
       categoryId: wein.id,
-      imageUrl: 'https://images.unsplash.com/photo-1513451713350-dee890297c4a?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1547595628-c61a29f496f0?w=800&q=80',
       isVegetarian: true,
       isVegan: true,
     },
@@ -791,7 +791,7 @@ async function main() {
       descriptionDe: 'Ananas, Coconut Cream, Sahne, weißer Rum (0,3L)',
       price: 8.90,
       categoryId: cocktails.id,
-      imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1568909344668-6f14a07b56a0?w=800&q=80',
       isVegetarian: true,
     },
     {
@@ -820,15 +820,19 @@ async function main() {
     },
   ];
 
-  // Delete existing menu items to ensure fresh data
-  logger.info('Deleting existing menu items...');
-  await prisma.menuItem.deleteMany({});
-
   logger.info('Creating menu items...');
   for (const item of menuItems) {
-    await prisma.menuItem.create({
-      data: item,
+    const existing = await prisma.menuItem.findFirst({
+      where: { 
+        name: item.name,
+        categoryId: item.categoryId
+      }
     });
+    if (!existing) {
+      await prisma.menuItem.create({
+        data: item,
+      });
+    }
   }
 
   // Create default settings
