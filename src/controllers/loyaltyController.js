@@ -13,7 +13,7 @@ const generateTokenCode = () => {
 // Create new visit token (Admin only)
 exports.createToken = async (req, res) => {
   try {
-  const { points, location, notes } = req.body;
+    const { points, location, notes } = req.body;
     const adminId = req.user.userId;
 
     // Validate points
@@ -35,26 +35,53 @@ exports.createToken = async (req, res) => {
       if (!existing) isUnique = true;
     }
 
-    // Create token
-    const token = await prisma.visitToken.create({
-      data: {
-        code,
-        points,
-        createdById: adminId,
-        expiresAt: null,
-        restaurantLocation: location || null,
-        notes: notes || null
-      },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+    const visitTokenData = {
+      code,
+      points,
+      createdById: adminId,
+      expiresAt: null,
+      restaurantLocation: location || null,
+      notes: notes || null
+    };
+
+    const includeConfig = {
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true
         }
       }
-    });
+    };
+
+    let token;
+    try {
+      token = await prisma.visitToken.create({
+        data: visitTokenData,
+        include: includeConfig
+      });
+    } catch (error) {
+      const requiresExpiry =
+        error?.code === 'P2011' &&
+        Array.isArray(error?.meta?.constraint) &&
+        error.meta.constraint.includes('expiresAt');
+
+      if (!requiresExpiry) {
+        throw error;
+      }
+
+      logger.warn(
+        'VisitToken.expiresAt is still NOT NULL in the database. Falling back to a far-future expiry. Please run the latest Prisma migrations to remove this constraint.'
+      );
+
+      token = await prisma.visitToken.create({
+        data: {
+          ...visitTokenData,
+          expiresAt: new Date('2099-12-31T23:59:59.999Z')
+        },
+        include: includeConfig
+      });
+    }
 
     res.status(201).json({
       success: true,
