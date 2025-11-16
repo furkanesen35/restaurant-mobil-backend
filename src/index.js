@@ -70,8 +70,9 @@ app.use("/api/payment", paymentRoutes);
 const favoritesRoutes = require("./routes/favorites");
 app.use("/api/favorites", favoritesRoutes);
 
-const notificationsRoutes = require("./routes/notifications");
-app.use("/api/notifications", notificationsRoutes);
+// Notifications temporarily disabled due to unresolved errors
+// const notificationsRoutes = require("./routes/notifications");
+// app.use("/api/notifications", notificationsRoutes);
 
 const settingsRoutes = require("./routes/settings");
 app.use("/api/settings", settingsRoutes);
