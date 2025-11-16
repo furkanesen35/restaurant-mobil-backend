@@ -1,31 +1,24 @@
-const nodemailer = require("nodemailer");
+const logger = require("./logger");
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-});
-
+/**
+ * SMTP has been intentionally disabled for now to avoid external dependencies
+ * during development. We log the intent instead of actually attempting to send
+ * the email so downstream flows keep working without errors.
+ */
 async function sendMail({ to, subject, text, html }) {
-  return Promise.race([
-    transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to,
-      subject,
-      text,
-      html,
-    }),
-    new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Email timeout')), 15000)
-    )
-  ]);
+  logger.warn("SMTP disabled - skipping email send", {
+    to,
+    subject,
+    hasText: Boolean(text),
+    hasHtml: Boolean(html),
+  });
+
+  return {
+    accepted: [],
+    rejected: [],
+    messageId: null,
+    disabled: true,
+  };
 }
 
 module.exports = { sendMail };

@@ -24,6 +24,7 @@ router.post('/tokens', authenticate, requireAdmin, loyaltyController.createToken
 router.get('/tokens', authenticate, requireAdmin, loyaltyController.listTokens);
 router.get('/tokens/:tokenId', authenticate, requireAdmin, loyaltyController.getToken);
 router.delete('/tokens/:tokenId', authenticate, requireAdmin, loyaltyController.deactivateToken);
+router.post('/reset', authenticate, requireAdmin, loyaltyController.resetAllPoints);
 
 // User routes - Redeem tokens
 router.post('/redeem', authenticate, redemptionLimiter, loyaltyController.redeemToken);

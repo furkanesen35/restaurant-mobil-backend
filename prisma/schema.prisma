@@ -159,7 +159,7 @@ model VisitToken {
   createdBy           User      @relation("CreatedTokens", fields: [createdById], references: [id])
   createdById         Int
   createdAt           DateTime  @default(now())
-  expiresAt           DateTime
+  expiresAt           DateTime?
   redeemedBy          User?     @relation("RedeemedTokens", fields: [redeemedById], references: [id])
   redeemedById        Int?
   redeemedAt          DateTime?
@@ -168,5 +168,5 @@ model VisitToken {
   notes               String?
   
   @@index([code])
-  @@index([isActive, expiresAt])
+  @@index([isActive])
 }

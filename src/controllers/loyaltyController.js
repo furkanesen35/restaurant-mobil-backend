@@ -13,7 +13,7 @@ const generateTokenCode = () => {
 // Create new visit token (Admin only)
 exports.createToken = async (req, res) => {
   try {
-    const { points, expiryHours = 24, location, notes } = req.body;
+  const { points, location, notes } = req.body;
     const adminId = req.user.userId;
 
     // Validate points
@@ -35,17 +35,13 @@ exports.createToken = async (req, res) => {
       if (!existing) isUnique = true;
     }
 
-    // Calculate expiry
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + expiryHours);
-
     // Create token
     const token = await prisma.visitToken.create({
       data: {
         code,
         points,
         createdById: adminId,
-        expiresAt,
+        expiresAt: null,
         restaurantLocation: location || null,
         notes: notes || null
       },
@@ -116,15 +112,6 @@ exports.redeemToken = async (req, res) => {
         success: false,
         error: 'Token inactive',
         message: 'This QR code has been deactivated'
-      });
-    }
-
-    // Check if expired
-    if (new Date() > new Date(token.expiresAt)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Token expired',
-        message: 'This QR code has expired'
       });
     }
 
@@ -199,14 +186,6 @@ exports.listTokens = async (req, res) => {
     const where = {};
     if (active === 'true') {
       where.isActive = true;
-      where.expiresAt = {
-        gt: new Date()
-      };
-    } else if (active === 'false') {
-      where.OR = [
-        { isActive: false },
-        { expiresAt: { lte: new Date() } }
-      ];
     }
 
     const [tokens, total] = await Promise.all([
@@ -251,7 +230,7 @@ exports.listTokens = async (req, res) => {
         createdBy: token.createdBy,
         redeemedBy: token.redeemedBy,
         redeemedAt: token.redeemedAt,
-        isExpired: new Date() > new Date(token.expiresAt),
+        isExpired: token.expiresAt ? new Date() > new Date(token.expiresAt) : false,
         isRedeemed: token.redeemedById !== null
       })),
       pagination: {
@@ -336,7 +315,7 @@ exports.getToken = async (req, res) => {
       token: {
         ...token,
         qrCodeData: `restaurantapp://loyalty/redeem/${token.code}`,
-        isExpired: new Date() > new Date(token.expiresAt),
+        isExpired: token.expiresAt ? new Date() > new Date(token.expiresAt) : false,
         isRedeemed: token.redeemedById !== null
       }
     });
@@ -345,6 +324,33 @@ exports.getToken = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to get token'
+    });
+  }
+};
+
+// Reset all loyalty points (Admin only)
+exports.resetAllPoints = async (req, res) => {
+  try {
+    const adminId = req.user.userId;
+    const result = await prisma.user.updateMany({
+      data: { loyaltyPoints: 0 }
+    });
+
+    logger.warn('Admin reset all loyalty points', {
+      adminId,
+      affectedUsers: result.count
+    });
+
+    res.json({
+      success: true,
+      message: 'All loyalty points reset',
+      usersUpdated: result.count
+    });
+  } catch (error) {
+    logger.error('Reset loyalty points error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset loyalty points'
     });
   }
 };
