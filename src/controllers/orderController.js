@@ -297,6 +297,8 @@ exports.createOrder = async (req, res, next) => {
           }),
     ]);
 
+    await prisma.cartItem.deleteMany({ where: { userId: userIdInt } });
+
     logger.info("Order created successfully:", order.id);
     res.status(201).json({
       success: true,

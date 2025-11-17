@@ -70,6 +70,9 @@ app.use("/api/payment", paymentRoutes);
 const favoritesRoutes = require("./routes/favorites");
 app.use("/api/favorites", favoritesRoutes);
 
+const cartRoutes = require("./routes/cart");
+app.use("/api/cart", cartRoutes);
+
 const postalCodeRoutes = require("./routes/postalCodes");
 app.use("/api/postal-codes", postalCodeRoutes);
 

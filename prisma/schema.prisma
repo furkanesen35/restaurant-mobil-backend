@@ -33,6 +33,7 @@ model User {
   addresses          Address[]
   paymentMethods     PaymentMethod[]
   favorites          Favorite[]
+  cartItems          CartItem[]
   createdTokens      VisitToken[] @relation("CreatedTokens")
   redeemedTokens     VisitToken[] @relation("RedeemedTokens")
 }
@@ -95,6 +96,7 @@ model MenuItem {
   loyaltyPointsMultiplier Float @default(1.0) // Multiplier for loyalty points (e.g., 2.0 = double points)
   orderItems  OrderItem[]
   favorites   Favorite[]
+  cartItems   CartItem[]
 }
 
 model Order {
@@ -139,6 +141,20 @@ model Favorite {
   menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   menuItemId Int
   createdAt  DateTime @default(now())
+
+  @@unique([userId, menuItemId])
+}
+
+model CartItem {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItemId Int
+  quantity   Int      @default(1)
+  imageUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([userId, menuItemId])
 }
