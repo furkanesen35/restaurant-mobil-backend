@@ -197,6 +197,34 @@ exports.createOrder = async (req, res, next) => {
       return sum + item.price * quantity;
     }, 0);
 
+    let validatedAddressId = null;
+    if (addressId) {
+      validatedAddressId = parseInt(addressId, 10);
+      if (Number.isNaN(validatedAddressId)) {
+        return res.status(400).json({ error: "Invalid addressId" });
+      }
+
+      const deliveryAddress = await prisma.address.findUnique({
+        where: { id: validatedAddressId },
+        select: { userId: true, postalCode: true },
+      });
+
+      if (!deliveryAddress || deliveryAddress.userId !== userIdInt) {
+        return res.status(404).json({ error: "Delivery address not found" });
+      }
+
+      const postalCode = (deliveryAddress.postalCode || "").trim();
+      const allowedPostalCode = await prisma.allowedPostalCode.findFirst({
+        where: { postalCode, isActive: true },
+      });
+
+      if (!allowedPostalCode) {
+        return res
+          .status(422)
+          .json({ error: "Selected address is outside delivery area" });
+      }
+    }
+
     // Check minimum order value
     const minOrderSetting = await prisma.settings.findUnique({
       where: { key: 'minOrderValue' }
@@ -234,7 +262,7 @@ exports.createOrder = async (req, res, next) => {
       prisma.order.create({
         data: {
           userId: userIdInt,
-          addressId: addressId ? parseInt(addressId, 10) : null,
+          addressId: validatedAddressId,
           status: "pending",
           estimatedDeliveryTime,
           loyaltyPointsAwarded: loyaltyPointsEarned,

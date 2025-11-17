@@ -70,6 +70,9 @@ app.use("/api/payment", paymentRoutes);
 const favoritesRoutes = require("./routes/favorites");
 app.use("/api/favorites", favoritesRoutes);
 
+const postalCodeRoutes = require("./routes/postalCodes");
+app.use("/api/postal-codes", postalCodeRoutes);
+
 // Notifications temporarily disabled due to unresolved errors
 // const notificationsRoutes = require("./routes/notifications");
 // app.use("/api/notifications", notificationsRoutes);

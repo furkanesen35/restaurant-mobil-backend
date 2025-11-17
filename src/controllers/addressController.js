@@ -17,13 +17,28 @@ exports.createAddress = async (req, res) => {
     logger.info("[DEBUG] saveToProfile:", saveToProfile);
     const userId = req.user.userId;
 
+    const normalizedPostalCode = (postalCode || "").trim();
+    if (!normalizedPostalCode) {
+      return res.status(400).json({ error: "Postal code is required" });
+    }
+
+    const allowedPostalCode = await prisma.allowedPostalCode.findFirst({
+      where: { postalCode: normalizedPostalCode, isActive: true },
+    });
+
+    if (!allowedPostalCode) {
+      return res
+        .status(422)
+        .json({ error: "Address is outside current delivery area" });
+    }
+
     // Create the address
     const address = await prisma.address.create({
       data: {
         label,
         street,
         city,
-        postalCode,
+        postalCode: normalizedPostalCode,
         phone,
         temporary: !saveToProfile, // Mark as temporary if not saving to profile
         user: { connect: { id: userId } },
@@ -58,9 +73,35 @@ exports.updateAddress = async (req, res) => {
   try {
     const { id } = req.params;
     const { label, street, city, postalCode, phone } = req.body;
+
+    let normalizedPostalCode;
+    if (postalCode !== undefined) {
+      normalizedPostalCode = (postalCode || "").trim();
+      if (!normalizedPostalCode) {
+        return res.status(400).json({ error: "Postal code is required" });
+      }
+
+      const allowedPostalCode = await prisma.allowedPostalCode.findFirst({
+        where: { postalCode: normalizedPostalCode, isActive: true },
+      });
+
+      if (!allowedPostalCode) {
+        return res
+          .status(422)
+          .json({ error: "Address is outside current delivery area" });
+      }
+    }
+
     const address = await prisma.address.update({
       where: { id: parseInt(id) },
-      data: { label, street, city, postalCode, phone },
+      data: {
+        label,
+        street,
+        city,
+        postalCode:
+          normalizedPostalCode !== undefined ? normalizedPostalCode : undefined,
+        phone,
+      },
     });
     res.json(address);
   } catch (err) {

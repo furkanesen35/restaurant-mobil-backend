@@ -5,6 +5,34 @@ const prisma = new PrismaClient();
 async function main() {
   logger.info('Starting database seeding...');
 
+  // Seed allowed delivery postal codes for dropdown control
+  const allowedPostalCodes = [
+    { postalCode: '27568', city: 'Bremerhaven', district: 'Mitte', radiusKm: 5, sortOrder: 1 },
+    { postalCode: '27570', city: 'Bremerhaven', district: 'Lehe', radiusKm: 5, sortOrder: 2 },
+    { postalCode: '27576', city: 'Bremerhaven', district: 'Geestemünde', radiusKm: 5, sortOrder: 3 },
+    { postalCode: '27572', city: 'Bremerhaven', district: 'Wulsdorf', radiusKm: 5, sortOrder: 4 },
+    { postalCode: '27574', city: 'Bremerhaven', district: 'Leherheide', radiusKm: 5, sortOrder: 5 },
+    { postalCode: '27578', city: 'Bremerhaven', district: 'Speckenbüttel', radiusKm: 5, sortOrder: 6 },
+  ];
+
+  logger.info('Ensuring allowed postal codes seeded...');
+  for (const code of allowedPostalCodes) {
+    await prisma.allowedPostalCode.upsert({
+      where: { postalCode: code.postalCode },
+      update: {
+        city: code.city,
+        district: code.district,
+        radiusKm: code.radiusKm,
+        sortOrder: code.sortOrder,
+        isActive: true,
+      },
+      create: {
+        ...code,
+        isActive: true,
+      },
+    });
+  }
+
   // Create menu categories
   const categories = [
     { name: 'Appetizer', nameEn: 'Appetizer', nameDe: 'Vorspeisen' },

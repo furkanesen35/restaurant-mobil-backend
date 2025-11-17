@@ -170,3 +170,17 @@ model VisitToken {
   @@index([code])
   @@index([isActive])
 }
+
+  model AllowedPostalCode {
+    id         Int      @id @default(autoincrement())
+    postalCode String   @unique
+    city       String
+    district   String?
+    radiusKm   Float?
+    sortOrder  Int      @default(0)
+    isActive   Boolean  @default(true)
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+
+    @@index([isActive, sortOrder])
+  }
