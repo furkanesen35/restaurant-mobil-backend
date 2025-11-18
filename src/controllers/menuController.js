@@ -4,53 +4,11 @@ const prisma = new PrismaClient();
 
 exports.getMenu = async (req, res) => {
   try {
-    const {
-      search,
-      categoryId,
-      isVegetarian,
-      isVegan,
-      isGlutenFree,
-      isSpicy,
-      lang = 'de', // Default to German
-    } = req.query;
-
-    // Build filter conditions
-    const itemFilters = {};
-
-    if (categoryId) {
-      itemFilters.categoryId = parseInt(categoryId);
-    }
-
-    if (isVegetarian === "true") {
-      itemFilters.isVegetarian = true;
-    }
-
-    if (isVegan === "true") {
-      itemFilters.isVegan = true;
-    }
-
-    if (isGlutenFree === "true") {
-      itemFilters.isGlutenFree = true;
-    }
-
-    if (isSpicy === "true") {
-      itemFilters.isSpicy = true;
-    }
-
-    if (search) {
-      const langField = lang === 'en' ? 'nameEn' : 'nameDe';
-      itemFilters.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { [langField]: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-      ];
-    }
+    const { lang = 'de' } = req.query; // Default to German
 
     const rawCategories = await prisma.menuCategory.findMany({
       include: {
-        items: {
-          where: itemFilters,
-        },
+        items: true,
       },
     });
 
@@ -89,7 +47,7 @@ exports.getMenu = async (req, res) => {
     );
 
     logger.info(
-      `Sending menu data (lang: ${lang}): ${categories.length} categories, ${items.length} items (filters applied: ${Object.keys(itemFilters).length})`
+      `Sending full menu data (lang: ${lang}): ${categories.length} categories, ${items.length} items`
     );
     res.json({ categories, items });
   } catch (err) {
