@@ -7,19 +7,56 @@ const logger = require("../utils/logger");
 const crypto = require("crypto");
 const { sendMail } = require("../utils/mailer");
 
-const emailLinkBaseUrl = (
-  process.env.EMAIL_LINK_BASE_URL ||
-  process.env.FRONTEND_URL ||
-  "http://localhost:8081"
-).replace(/\/$/, "");
+const trimTrailingSlash = (value = "") => value.replace(/\/$/, "");
+const isHttpUrl = (value) => typeof value === "string" && /^https?:\/\//i.test(value);
 
-const buildEmailLink = (path) => {
-  if (!path) {
-    return emailLinkBaseUrl;
+const resolveEmailBaseUrl = (req) => {
+  const {
+    EMAIL_LINK_BASE_URL,
+    FRONTEND_URL,
+    PUBLIC_EMAIL_BASE_URL,
+  } = process.env;
+
+  if (isHttpUrl(EMAIL_LINK_BASE_URL)) {
+    return trimTrailingSlash(EMAIL_LINK_BASE_URL);
   }
 
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${emailLinkBaseUrl}${normalizedPath}`;
+  if (isHttpUrl(PUBLIC_EMAIL_BASE_URL)) {
+    return trimTrailingSlash(PUBLIC_EMAIL_BASE_URL);
+  }
+
+  if (isHttpUrl(FRONTEND_URL)) {
+    return trimTrailingSlash(FRONTEND_URL);
+  }
+
+  const origin = req.get("origin");
+  if (isHttpUrl(origin)) {
+    return trimTrailingSlash(origin);
+  }
+
+  const forwardedProto = req.get("x-forwarded-proto");
+  const protocol = forwardedProto
+    ? forwardedProto.split(",")[0].trim()
+    : req.secure
+      ? "https"
+      : "http";
+  const host = req.get("host") || "localhost:3000";
+
+  return `${protocol}://${host}`.replace(/\/$/, "");
+};
+
+const buildEmailLink = (req, path, params = {}) => {
+  const baseUrl = resolveEmailBaseUrl(req);
+  const normalizedPath = path?.startsWith("/") ? path : `/${path || ""}`;
+  const url = new URL(`${baseUrl}${normalizedPath}`);
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  return url.toString();
 };
 
 const buildVerificationEmailHtml = (token, verifyUrl) => `
@@ -90,7 +127,7 @@ exports.sendVerificationEmail = async (req, res, next) => {
       where: { email },
       data: { verificationToken: token },
     });
-    const verifyUrl = `${buildEmailLink("/verify-email")}?token=${token}`;
+    const verifyUrl = buildEmailLink(req, "/verify-email", { token });
     await sendMail({
       to: email,
       subject: "Verify Your Email - Restaurant App",
@@ -142,7 +179,7 @@ exports.forgotPassword = async (req, res, next) => {
         resetTokenExpiry: new Date(Date.now() + 3600 * 1000),
       },
     });
-    const resetUrl = `${buildEmailLink("/reset-password")}?token=${token}`;
+    const resetUrl = buildEmailLink(req, "/reset-password", { token });
     await sendMail({
       to: email,
       subject: "Password Reset - Restaurant App",
@@ -313,7 +350,9 @@ exports.register = async (req, res, next) => {
 
     // Send verification email
     try {
-      const verifyUrl = `${buildEmailLink("/verify-email")}?token=${verificationToken}`;
+      const verifyUrl = buildEmailLink(req, "/verify-email", {
+        token: verificationToken,
+      });
       await sendMail({
         to: email,
         subject: "Verify Your Email - Restaurant App",
