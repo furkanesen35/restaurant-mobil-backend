@@ -76,9 +76,8 @@ app.use("/api/cart", cartRoutes);
 const postalCodeRoutes = require("./routes/postalCodes");
 app.use("/api/postal-codes", postalCodeRoutes);
 
-// Notifications temporarily disabled due to unresolved errors
-// const notificationsRoutes = require("./routes/notifications");
-// app.use("/api/notifications", notificationsRoutes);
+const notificationsRoutes = require("./routes/notifications");
+app.use("/api/notifications", notificationsRoutes);
 
 const settingsRoutes = require("./routes/settings");
 app.use("/api/settings", settingsRoutes);
