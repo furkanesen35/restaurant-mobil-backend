@@ -34,7 +34,6 @@ router.delete(
 router.patch(
   "/:orderId/status",
   authenticate,
-  requireAdmin,
   orderValidation.updateStatus,
   orderController.updateOrderStatus
 );

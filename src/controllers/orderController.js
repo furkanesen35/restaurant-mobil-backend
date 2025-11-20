@@ -412,6 +412,14 @@ exports.updateOrderStatus = async (req, res) => {
         .status(400).json({ error: "Invalid status value", allowed: allowedStatuses });
     }
 
+    const requestingUserId = req.user?.userId;
+    const isAdmin = req.user?.role === "admin";
+
+    if (!requestingUserId && !isAdmin) {
+      logger.info("[UPDATE STATUS] Unauthorized access: missing user context");
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
     // Get the order with items to calculate points
     const existingOrder = await prisma.order.findUnique({
       where: { id: orderId },
@@ -427,6 +435,24 @@ exports.updateOrderStatus = async (req, res) => {
     if (!existingOrder) {
       logger.info("[UPDATE STATUS] Order not found:", orderId);
       return res.status(404).json({ error: "Order not found" });
+    }
+
+    // Non-admin users can only cancel their own pending orders
+    if (!isAdmin) {
+      if (status !== "cancelled") {
+        logger.info("[UPDATE STATUS] Non-admin tried to change status other than cancelled", { status, userId: requestingUserId });
+        return res.status(403).json({ error: "Insufficient permissions for this status change" });
+      }
+
+      if (existingOrder.userId !== requestingUserId) {
+        logger.info("[UPDATE STATUS] User tried to cancel order they do not own", { requestingUserId, orderOwner: existingOrder.userId });
+        return res.status(403).json({ error: "You can only cancel your own orders" });
+      }
+
+      if (existingOrder.status !== "pending") {
+        logger.info("[UPDATE STATUS] User tried to cancel non-pending order", { currentStatus: existingOrder.status });
+        return res.status(400).json({ error: "Only pending orders can be cancelled" });
+      }
     }
 
     // Calculate loyalty points to deduct using stored award data
