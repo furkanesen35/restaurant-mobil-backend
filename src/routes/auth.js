@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authController");
 const { authValidation } = require("../middleware/validation");
+const { authenticate } = require("../middleware/auth");
 // const { authLimiter } = require("../middleware/rateLimiter");
 
 // Apply rate limiting to all auth routes
@@ -28,5 +29,8 @@ router.post("/google", authController.googleSignIn);
 
 // Refresh token endpoint (if needed)
 router.post("/refresh", authController.refreshToken);
+
+// Get current user (validates token)
+router.get("/me", authenticate, authController.getCurrentUser);
 
 module.exports = router;
