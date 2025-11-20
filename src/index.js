@@ -4,7 +4,7 @@ const app = express();
 
 // Import middleware and config
 const securityConfig = require("./config/security");
-const { apiLimiter, authLimiter } = require("./middleware/rateLimiter");
+const { apiLimiter } = require("./middleware/rateLimiter");
 const {
   errorHandler,
   notFoundHandler,
@@ -27,7 +27,6 @@ app.use(requestLogger);
 
 // Rate limiting
 app.use("/api/", apiLimiter);
-app.use("/auth/", authLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
@@ -89,6 +88,7 @@ app.use("/api/loyalty", loyaltyRoutes);
 app.use("/menu", menuRoutes);
 app.use("/auth", authRoutes);
 app.use("/order", orderRoutes);
+app.use("/notifications", notificationsRoutes);
 
 app.get("/", (req, res) => {
   res.json({

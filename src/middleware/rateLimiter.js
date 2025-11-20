@@ -24,7 +24,31 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    error: "Too many password reset attempts",
+    message: "Please wait a few minutes before requesting another password reset email",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const verificationEmailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    error: "Too many verification attempts",
+    message: "Please wait a few minutes before requesting another verification email",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   apiLimiter,
   authLimiter,
+  passwordResetLimiter,
+  verificationEmailLimiter,
 };

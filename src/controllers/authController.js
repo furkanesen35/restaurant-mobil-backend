@@ -452,24 +452,27 @@ exports.refreshToken = async (req, res, next) => {
 // Get current user (validates token and returns user info)
 exports.getCurrentUser = async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({
+    const userRecord = await prisma.user.findUnique({
       where: { id: req.user.userId },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
-        isEmailVerified: true,
+        isVerified: true,
         loyaltyPoints: true,
         createdAt: true,
       },
     });
 
-    if (!user) {
+    if (!userRecord) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json(user);
+    res.json({
+      ...userRecord,
+      isEmailVerified: userRecord.isVerified,
+    });
   } catch (err) {
     logger.error("Get current user error", { error: err.message });
     next(err);
