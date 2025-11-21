@@ -53,21 +53,16 @@ router.get("/verify-email", (req, res) => {
           .status { font-size: 18px; margin-top: 20px; }
           .success { color: #2e7d32; }
           .error { color: #c62828; }
-          .token { background-color: #e8f5e9; border: 2px dashed #4CAF50; padding: 20px; border-radius: 5px; margin: 20px 0; word-break: break-all; }
         </style>
       </head>
       <body>
         <div class="container">
           <h1>🎉 Verifying Your Email</h1>
           <p class="status" id="status">Please wait while we verify your email...</p>
-          <div class="token" id="token-box" style="display:none;">
-            <div id="token">${safeToken}</div>
-          </div>
         </div>
         <script>
           const token = ${JSON.stringify(token)};
           const statusEl = document.getElementById('status');
-          const tokenBox = document.getElementById('token-box');
 
           fetch('/api/auth/verify-email?token=' + encodeURIComponent(token))
             .then(async (res) => {
@@ -82,9 +77,8 @@ router.get("/verify-email", (req, res) => {
               statusEl.classList.add('success');
             })
             .catch((error) => {
-              statusEl.textContent = error.message + ' Please copy the token below and verify inside the app.';
+              statusEl.textContent = error.message + ' Please return to the app and try again.';
               statusEl.classList.add('error');
-              tokenBox.style.display = 'block';
             });
         </script>
       </body>
@@ -117,7 +111,6 @@ const renderResetForm = (token, message = "", isError = false) => {
           .message { margin-top: 20px; font-size: 16px; text-align: center; }
           .success { color: #2e7d32; }
           .error { color: #c62828; }
-          .token { background-color: #fff3e0; border: 2px dashed #FF6B35; padding: 20px; border-radius: 5px; margin: 20px 0; word-break: break-all; }
         </style>
       </head>
       <body>
@@ -137,10 +130,6 @@ const renderResetForm = (token, message = "", isError = false) => {
             <button type="submit">Reset Password</button>
           </form>
           ${messageHtml}
-          <div class="token" style="margin-top:20px;">
-            <small>If the button does not work, use this code in the app:</small>
-            <div style="margin-top:10px; font-weight:bold;">${safeToken}</div>
-          </div>
         </div>
       </body>
     </html>
