@@ -1,6 +1,34 @@
 const helmet = require("helmet");
 const cors = require("cors");
 
+const buildFormActionSources = () => {
+  const sources = ["'self'"];
+
+  const baseUrl = process.env.EMAIL_LINK_BASE_URL;
+  if (!baseUrl) {
+    return sources;
+  }
+
+  try {
+    const url = new URL(baseUrl);
+    const origin = `${url.protocol}//${url.host}`;
+    if (!sources.includes(origin)) {
+      sources.push(origin);
+    }
+
+    if (url.protocol === "http:") {
+      const httpsOrigin = `https://${url.host}`;
+      if (!sources.includes(httpsOrigin)) {
+        sources.push(httpsOrigin);
+      }
+    }
+  } catch (error) {
+    // Ignore parsing errors and fall back to the default self-origin only
+  }
+
+  return sources;
+};
+
 // Security configuration
 const securityConfig = {
   // Helmet for security headers
@@ -11,6 +39,7 @@ const securityConfig = {
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", "data:", "https:"],
+        formAction: buildFormActionSources(),
       },
     },
     crossOriginEmbedderPolicy: false,
