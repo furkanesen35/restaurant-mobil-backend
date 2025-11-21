@@ -40,6 +40,7 @@ const securityConfig = {
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", "data:", "https:"],
         formAction: buildFormActionSources(),
+        upgradeInsecureRequests: null,
       },
     },
     crossOriginEmbedderPolicy: false,
