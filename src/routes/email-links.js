@@ -1,5 +1,10 @@
 const express = require("express");
 const router = express.Router();
+const { PrismaClient } = require("../generated/prisma");
+const bcrypt = require("bcryptjs");
+const logger = require("../utils/logger");
+
+const prisma = new PrismaClient();
 
 const sanitize = (value = "") =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -89,18 +94,13 @@ router.get("/verify-email", (req, res) => {
   res.type("html").send(html);
 });
 
-router.get("/reset-password", (req, res) => {
-  const { token } = req.query;
-
-  if (!token) {
-    return res
-      .status(400)
-      .send(renderErrorPage("❌ Invalid Link", "Reset token is missing."));
-  }
-
+const renderResetForm = (token, message = "", isError = false) => {
   const safeToken = sanitize(token);
+  const messageHtml = message
+    ? `<div class="message ${isError ? "error" : "success"}">${message}</div>`
+    : "";
 
-  const html = `
+  return `
     <!DOCTYPE html>
     <html>
       <head>
@@ -124,7 +124,7 @@ router.get("/reset-password", (req, res) => {
         <div class="container">
           <h1>🔐 Reset Your Password</h1>
           <p>Enter your new password below. This code expires in 1 hour.</p>
-          <form id="reset-form">
+          <form method="POST" action="/reset-password">
             <input type="hidden" name="token" value="${safeToken}" />
             <div>
               <label for="password">New Password</label>
@@ -136,58 +136,99 @@ router.get("/reset-password", (req, res) => {
             </div>
             <button type="submit">Reset Password</button>
           </form>
-          <div class="message" id="message"></div>
-          <div class="token" id="token-box" style="display:none;">
-            <div id="token">${safeToken}</div>
+          ${messageHtml}
+          <div class="token" style="margin-top:20px;">
+            <small>If the button does not work, use this code in the app:</small>
+            <div style="margin-top:10px; font-weight:bold;">${safeToken}</div>
           </div>
         </div>
-        <script>
-          const form = document.getElementById('reset-form');
-          const message = document.getElementById('message');
-          const tokenBox = document.getElementById('token-box');
-          const apiToken = ${JSON.stringify(token)};
-
-          form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            message.textContent = 'Processing...';
-            message.className = 'message';
-
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            if (password !== confirmPassword) {
-              message.textContent = 'Passwords do not match.';
-              message.classList.add('error');
-              return;
-            }
-
-            try {
-              const response = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: apiToken, newPassword: password })
-              });
-
-              if (!response.ok) {
-                const data = await response.json().catch(() => ({ message: 'Failed to reset password.' }));
-                throw new Error(data.error || data.message || 'Failed to reset password.');
-              }
-
-              message.textContent = '✅ Password reset successfully! You can now return to the app and log in with your new password.';
-              message.classList.add('success');
-              form.reset();
-            } catch (error) {
-              message.textContent = error.message + ' If the issue persists, copy the code below and try resetting inside the app.';
-              message.classList.add('error');
-              tokenBox.style.display = 'block';
-            }
-          });
-        </script>
       </body>
     </html>
   `;
+};
 
-  res.type("html").send(html);
+router.get("/reset-password", (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return res
+      .status(400)
+      .send(renderErrorPage("❌ Invalid Link", "Reset token is missing."));
+  }
+
+  res.type("html").send(renderResetForm(token));
+});
+
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+
+    if (!token) {
+      return res
+        .status(400)
+        .send(renderErrorPage("❌ Invalid Request", "Reset token is missing."));
+    }
+
+    if (!password || !confirmPassword) {
+      return res
+        .status(400)
+        .send(renderResetForm(token, "Please enter and confirm your new password.", true));
+    }
+
+    if (password !== confirmPassword) {
+      return res
+        .status(400)
+        .send(renderResetForm(token, "Passwords do not match.", true));
+    }
+
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .send(renderResetForm(token, "Password must be at least 6 characters.", true));
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: { gte: new Date() },
+      },
+    });
+
+    if (!user) {
+      return res
+        .status(400)
+        .send(renderErrorPage("❌ Invalid or Expired Token", "Please request a new password reset email."));
+    }
+
+    const saltRounds = parseInt(process.env.BCRYPT_ROUNDS, 10) || 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
+    });
+
+    logger.info("Password reset via web form", { userId: user.id, email: user.email });
+
+    return res
+      .status(200)
+      .send(
+        renderResetForm(
+          token,
+          "✅ Password reset successfully! You can now return to the app and log in with your new password.",
+          false
+        )
+      );
+  } catch (error) {
+    logger.error("Password reset form error", { error: error.message });
+    return res
+      .status(500)
+      .send(renderErrorPage("Server Error", "Something went wrong. Please try again."));
+  }
 });
 
 module.exports = router;
