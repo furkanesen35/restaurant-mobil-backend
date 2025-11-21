@@ -1,32 +1,49 @@
 const helmet = require("helmet");
 const cors = require("cors");
 
-const buildFormActionSources = () => {
-  const sources = ["'self'"];
-
+const getEmailLinkOrigins = () => {
+  const origins = [];
   const baseUrl = process.env.EMAIL_LINK_BASE_URL;
+
   if (!baseUrl) {
-    return sources;
+    return origins;
   }
 
   try {
     const url = new URL(baseUrl);
     const origin = `${url.protocol}//${url.host}`;
+    origins.push(origin);
+
+    if (url.protocol === "http:") {
+      origins.push(`https://${url.host}`);
+    }
+  } catch (error) {
+    // Ignore parsing errors and fall back to defaults
+  }
+
+  return origins;
+};
+
+const buildFormActionSources = () => {
+  const sources = ["'self'"];
+  getEmailLinkOrigins().forEach((origin) => {
     if (!sources.includes(origin)) {
       sources.push(origin);
     }
-
-    if (url.protocol === "http:") {
-      const httpsOrigin = `https://${url.host}`;
-      if (!sources.includes(httpsOrigin)) {
-        sources.push(httpsOrigin);
-      }
-    }
-  } catch (error) {
-    // Ignore parsing errors and fall back to the default self-origin only
-  }
-
+  });
   return sources;
+};
+
+const buildAllowedOrigins = () => {
+  const defaults = ["http://localhost:3000", "http://localhost:19006"];
+  const envOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+    : [];
+
+  const combined = [...defaults, ...envOrigins, ...getEmailLinkOrigins()];
+  return Array.from(new Set(combined));
 };
 
 // Security configuration
@@ -49,12 +66,12 @@ const securityConfig = {
   // CORS configuration
   cors: cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
+      // Allow requests with no origin header or explicit "null" origins (file://, same-origin forms)
+      if (!origin || origin === "null") {
+        return callback(null, true);
+      }
 
-      const allowedOrigins = process.env.ALLOWED_ORIGINS
-        ? process.env.ALLOWED_ORIGINS.split(",")
-        : ["http://localhost:3000", "http://localhost:19006"];
+      const allowedOrigins = buildAllowedOrigins();
 
       // Allow all local network IPs (192.168.x.x, 10.x.x.x, etc.) and localhost
       const isLocalNetwork =
