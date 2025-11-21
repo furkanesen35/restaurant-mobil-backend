@@ -84,6 +84,9 @@ app.use("/api/settings", settingsRoutes);
 const loyaltyRoutes = require("./routes/loyalty");
 app.use("/api/loyalty", loyaltyRoutes);
 
+const emailLinksRoutes = require("./routes/email-links");
+app.use("/", emailLinksRoutes);
+
 // Legacy routes for backward compatibility
 app.use("/menu", menuRoutes);
 app.use("/auth", authRoutes);
