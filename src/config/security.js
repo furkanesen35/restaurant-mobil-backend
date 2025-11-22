@@ -72,6 +72,11 @@ const securityConfig = {
       }
 
       const allowedOrigins = buildAllowedOrigins();
+      
+      // Explicitly allow the public IP for mobile app access
+      if (origin && origin.includes("40.67.194.111")) {
+        return callback(null, true);
+      }
 
       // Allow all local network IPs (192.168.x.x, 10.x.x.x, etc.) and localhost
       const isLocalNetwork =
