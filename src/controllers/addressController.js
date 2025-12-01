@@ -72,7 +72,17 @@ exports.getAddresses = async (req, res) => {
 exports.updateAddress = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
     const { label, street, city, postalCode, phone } = req.body;
+
+    // Verify ownership of the address
+    const existingAddress = await prisma.address.findFirst({
+      where: { id: parseInt(id), userId },
+    });
+
+    if (!existingAddress) {
+      return res.status(404).json({ error: "Address not found" });
+    }
 
     let normalizedPostalCode;
     if (postalCode !== undefined) {
@@ -113,6 +123,17 @@ exports.updateAddress = async (req, res) => {
 exports.deleteAddress = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
+
+    // Verify ownership of the address
+    const existingAddress = await prisma.address.findFirst({
+      where: { id: parseInt(id), userId },
+    });
+
+    if (!existingAddress) {
+      return res.status(404).json({ error: "Address not found" });
+    }
+
     await prisma.address.delete({ where: { id: parseInt(id) } });
     res.json({ success: true });
   } catch (err) {

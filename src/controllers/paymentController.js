@@ -58,6 +58,7 @@ exports.getPaymentMethods = async (req, res) => {
 exports.updatePaymentMethod = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
     const {
       type,
       cardNumber,
@@ -67,6 +68,16 @@ exports.updatePaymentMethod = async (req, res) => {
       paypalEmail,
       isDefault,
     } = req.body;
+
+    // Verify ownership of the payment method
+    const existingMethod = await prisma.paymentMethod.findFirst({
+      where: { id: parseInt(id), userId },
+    });
+
+    if (!existingMethod) {
+      return res.status(404).json({ error: "Payment method not found" });
+    }
+
     const paymentMethod = await prisma.paymentMethod.update({
       where: { id: parseInt(id) },
       data: {
@@ -89,6 +100,17 @@ exports.updatePaymentMethod = async (req, res) => {
 exports.deletePaymentMethod = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
+
+    // Verify ownership of the payment method
+    const existingMethod = await prisma.paymentMethod.findFirst({
+      where: { id: parseInt(id), userId },
+    });
+
+    if (!existingMethod) {
+      return res.status(404).json({ error: "Payment method not found" });
+    }
+
     await prisma.paymentMethod.delete({ where: { id: parseInt(id) } });
     res.json({ success: true });
   } catch (err) {
