@@ -82,9 +82,18 @@ exports.addItem = async (req, res) => {
 
     // Validate modifiers if provided
     const parsedModifiers = [];
-    if (modifiers && modifiers.length > 0) {
-      logger.info("Processing modifiers:", JSON.stringify(modifiers));
-      const modifierIds = modifiers.map((m) => parseInt(m.modifierId, 10)).filter((id) => !isNaN(id));
+    logger.info("Raw modifiers type:", typeof modifiers, "isArray:", Array.isArray(modifiers), "value:", JSON.stringify(modifiers));
+    
+    // Convert object to array if needed (in case body-parser converted it)
+    let modifiersArray = modifiers;
+    if (modifiers && typeof modifiers === 'object' && !Array.isArray(modifiers)) {
+      modifiersArray = Object.values(modifiers);
+      logger.info("Converted modifiers object to array:", JSON.stringify(modifiersArray));
+    }
+    
+    if (modifiersArray && Array.isArray(modifiersArray) && modifiersArray.length > 0) {
+      logger.info("Processing modifiers:", JSON.stringify(modifiersArray));
+      const modifierIds = modifiersArray.map((m) => parseInt(m.modifierId, 10)).filter((id) => !isNaN(id));
       logger.info("Parsed modifier IDs:", modifierIds, "for menuItemId:", parsedMenuItemId);
       
       if (modifierIds.length > 0) {
@@ -97,7 +106,7 @@ exports.addItem = async (req, res) => {
         });
         logger.info("Found existing modifiers:", existingModifiers.length, JSON.stringify(existingModifiers));
 
-        for (const mod of modifiers) {
+        for (const mod of modifiersArray) {
           const modifierId = parseInt(mod.modifierId, 10);
           const modQuantity = Math.max(1, parseInt(mod.quantity, 10) || 1);
           const existingMod = existingModifiers.find((m) => m.id === modifierId);
