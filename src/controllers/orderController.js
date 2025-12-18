@@ -161,6 +161,10 @@ exports.createOrder = async (req, res, next) => {
     const finalItems = processedItems.map((item) => ({
       menuItemId: parseInt(item.menuItemId),
       quantity: parseInt(item.quantity) || 1,
+      modifiers: Array.isArray(item.modifiers) ? item.modifiers.map(mod => ({
+        modifierId: parseInt(mod.modifierId),
+        quantity: parseInt(mod.quantity) || 1,
+      })) : [],
     }));
 
     // Validate that all menu items exist
@@ -179,25 +183,82 @@ exports.createOrder = async (req, res, next) => {
       });
     }
 
+    // Collect all modifier IDs and validate them
+    const allModifierIds = finalItems
+      .flatMap((item) => item.modifiers.map((mod) => mod.modifierId))
+      .filter((id) => !isNaN(id));
+    
+    let existingModifiers = [];
+    if (allModifierIds.length > 0) {
+      existingModifiers = await prisma.menuItemModifier.findMany({
+        where: { 
+          id: { in: allModifierIds },
+          isAvailable: true,
+        },
+      });
+
+      // Validate all modifiers exist and belong to correct menu items
+      for (const item of finalItems) {
+        for (const mod of item.modifiers) {
+          const modifier = existingModifiers.find((m) => m.id === mod.modifierId);
+          if (!modifier) {
+            return res.status(400).json({
+              error: "Invalid modifier",
+              message: `Modifier with ID ${mod.modifierId} does not exist or is unavailable`,
+            });
+          }
+          if (modifier.menuItemId !== item.menuItemId) {
+            return res.status(400).json({
+              error: "Invalid modifier",
+              message: `Modifier "${modifier.name}" cannot be added to this menu item`,
+            });
+          }
+          if (mod.quantity > modifier.maxQuantity) {
+            return res.status(400).json({
+              error: "Invalid modifier quantity",
+              message: `Modifier "${modifier.name}" can only be added up to ${modifier.maxQuantity} times`,
+            });
+          }
+        }
+      }
+    }
+
+    // Create modifier lookup map
+    const modifierMap = existingModifiers.reduce((acc, mod) => {
+      acc[mod.id] = mod;
+      return acc;
+    }, {});
+
     // Create item map for quantities and multipliers
     const itemQuantityMap = finalItems.reduce((acc, item) => {
       acc[item.menuItemId] = item.quantity;
       return acc;
     }, {});
 
-    // Add multiplier to finalItems from existing menu items
+    // Add multiplier and modifiers to finalItems from existing menu items
     const finalItemsWithMultiplier = finalItems.map((item) => {
       const menuItem = existingItems.find((mi) => mi.id === item.menuItemId);
       return {
         menuItemId: item.menuItemId,
         quantity: item.quantity,
         loyaltyPointsMultiplier: menuItem?.loyaltyPointsMultiplier || 1.0,
+        modifiers: item.modifiers,
       };
     });
 
-    const orderTotal = existingItems.reduce((sum, item) => {
-      const quantity = itemQuantityMap[item.id] || 0;
-      return sum + item.price * quantity;
+    // Calculate order total including modifiers
+    const orderTotal = finalItems.reduce((sum, item) => {
+      const menuItem = existingItems.find((mi) => mi.id === item.menuItemId);
+      const baseItemTotal = (menuItem?.price || 0) * item.quantity;
+      
+      // Calculate modifiers total for this item
+      const modifiersTotal = item.modifiers.reduce((modSum, mod) => {
+        const modifier = modifierMap[mod.modifierId];
+        return modSum + (modifier?.price || 0) * mod.quantity;
+      }, 0);
+      
+      // Modifiers total is multiplied by item quantity
+      return sum + baseItemTotal + (modifiersTotal * item.quantity);
     }, 0);
 
     let validatedAddressId = null;
@@ -245,13 +306,21 @@ exports.createOrder = async (req, res, next) => {
       }
     }
 
-    // Calculate loyalty points with multipliers
+    // Calculate loyalty points with multipliers (including modifiers)
     const loyaltyPointsEarned = Math.floor(
-      existingItems.reduce((sum, item) => {
-        const quantity = itemQuantityMap[item.id] || 0;
-        const itemPrice = item.price * quantity;
-        const multiplier = item.loyaltyPointsMultiplier || 1.0;
-        return sum + (itemPrice * multiplier);
+      finalItems.reduce((sum, item) => {
+        const menuItem = existingItems.find((mi) => mi.id === item.menuItemId);
+        const quantity = item.quantity;
+        const baseItemPrice = (menuItem?.price || 0) * quantity;
+        const multiplier = menuItem?.loyaltyPointsMultiplier || 1.0;
+        
+        // Calculate modifiers total for this item
+        const modifiersTotal = item.modifiers.reduce((modSum, mod) => {
+          const modifier = modifierMap[mod.modifierId];
+          return modSum + (modifier?.price || 0) * mod.quantity;
+        }, 0) * quantity;
+        
+        return sum + ((baseItemPrice + modifiersTotal) * multiplier);
       }, 0)
     );
 
@@ -260,6 +329,20 @@ exports.createOrder = async (req, res, next) => {
     const estimatedDeliveryTime = new Date(
       Date.now() + estimatedMinutes * 60 * 1000
     );
+
+    // Prepare order items data with modifiers
+    const orderItemsData = finalItemsWithMultiplier.map((item) => ({
+      menuItemId: item.menuItemId,
+      quantity: item.quantity,
+      loyaltyPointsMultiplier: item.loyaltyPointsMultiplier,
+      modifiers: {
+        create: item.modifiers.map((mod) => ({
+          modifierId: mod.modifierId,
+          quantity: mod.quantity,
+          priceAtOrder: modifierMap[mod.modifierId]?.price || 0,
+        })),
+      },
+    }));
 
     const [order, updatedUser] = await prisma.$transaction([
       prisma.order.create({
@@ -270,12 +353,19 @@ exports.createOrder = async (req, res, next) => {
           estimatedDeliveryTime,
           loyaltyPointsAwarded: loyaltyPointsEarned,
           items: {
-            create: finalItemsWithMultiplier,
+            create: orderItemsData,
           },
         },
         include: {
           items: {
-            include: { menuItem: true },
+            include: { 
+              menuItem: true,
+              modifiers: {
+                include: {
+                  modifier: true,
+                },
+              },
+            },
           },
           address: true,
         },
@@ -359,6 +449,18 @@ exports.getUserOrders = async (req, res, next) => {
                 id: true,
                 name: true,
                 price: true,
+              },
+            },
+            modifiers: {
+              include: {
+                modifier: {
+                  select: {
+                    id: true,
+                    name: true,
+                    nameEn: true,
+                    nameDe: true,
+                  },
+                },
               },
             },
           },

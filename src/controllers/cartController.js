@@ -5,10 +5,16 @@ const prisma = new PrismaClient();
 
 const cartInclude = {
   menuItem: true,
+  modifiers: {
+    include: {
+      modifier: true,
+    },
+  },
 };
 
 const formatCartItems = (items = []) =>
   items.map((item) => ({
+    cartItemId: item.id,
     menuItemId: item.menuItemId.toString(),
     quantity: item.quantity,
     name: item.menuItem?.name || "",
@@ -20,6 +26,14 @@ const formatCartItems = (items = []) =>
     price: item.menuItem?.price || 0,
     imageUrl: item.imageUrl || item.menuItem?.imageUrl || null,
     categoryId: item.menuItem?.categoryId?.toString() || null,
+    modifiers: (item.modifiers || []).map((mod) => ({
+      modifierId: mod.modifierId,
+      quantity: mod.quantity,
+      name: mod.modifier?.name || "",
+      nameEn: mod.modifier?.nameEn || null,
+      nameDe: mod.modifier?.nameDe || null,
+      price: mod.modifier?.price || 0,
+    })),
   }));
 
 const fetchUserCart = async (userId) => {
@@ -44,7 +58,7 @@ exports.getCart = async (req, res) => {
 exports.addItem = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { menuItemId, quantity = 1 } = req.body || {};
+    const { menuItemId, quantity = 1, modifiers = [] } = req.body || {};
 
     const parsedMenuItemId = parseInt(menuItemId, 10);
     const parsedQuantity = Math.max(1, parseInt(quantity, 10) || 1);
@@ -61,26 +75,94 @@ exports.addItem = async (req, res) => {
       return res.status(404).json({ error: "Menu item not found" });
     }
 
-    await prisma.cartItem.upsert({
+    // Validate modifiers if provided
+    const parsedModifiers = [];
+    if (modifiers && modifiers.length > 0) {
+      const modifierIds = modifiers.map((m) => parseInt(m.modifierId, 10)).filter((id) => !isNaN(id));
+      
+      if (modifierIds.length > 0) {
+        const existingModifiers = await prisma.menuItemModifier.findMany({
+          where: {
+            id: { in: modifierIds },
+            menuItemId: parsedMenuItemId,
+            isAvailable: true,
+          },
+        });
+
+        for (const mod of modifiers) {
+          const modifierId = parseInt(mod.modifierId, 10);
+          const modQuantity = Math.max(1, parseInt(mod.quantity, 10) || 1);
+          const existingMod = existingModifiers.find((m) => m.id === modifierId);
+
+          if (!existingMod) {
+            return res.status(400).json({
+              error: `Modifier ${modifierId} is not valid for this menu item`,
+            });
+          }
+
+          if (modQuantity > existingMod.maxQuantity) {
+            return res.status(400).json({
+              error: `Modifier "${existingMod.name}" can only be added up to ${existingMod.maxQuantity} times`,
+            });
+          }
+
+          parsedModifiers.push({
+            modifierId,
+            quantity: modQuantity,
+          });
+        }
+      }
+    }
+
+    // Check if a cart item with the same menu item and modifiers already exists
+    const existingCartItems = await prisma.cartItem.findMany({
       where: {
-        userId_menuItemId: {
-          userId,
-          menuItemId: parsedMenuItemId,
-        },
-      },
-      update: {
-        quantity: {
-          increment: parsedQuantity,
-        },
-        imageUrl: menuItem.imageUrl,
-      },
-      create: {
         userId,
         menuItemId: parsedMenuItemId,
-        quantity: parsedQuantity,
-        imageUrl: menuItem.imageUrl,
+      },
+      include: {
+        modifiers: true,
       },
     });
+
+    // Find a cart item with matching modifiers
+    const modifiersKey = JSON.stringify(
+      parsedModifiers.sort((a, b) => a.modifierId - b.modifierId)
+    );
+    
+    const matchingCartItem = existingCartItems.find((cartItem) => {
+      const existingModifiersKey = JSON.stringify(
+        cartItem.modifiers
+          .map((m) => ({ modifierId: m.modifierId, quantity: m.quantity }))
+          .sort((a, b) => a.modifierId - b.modifierId)
+      );
+      return existingModifiersKey === modifiersKey;
+    });
+
+    if (matchingCartItem) {
+      // Update quantity of existing cart item
+      await prisma.cartItem.update({
+        where: { id: matchingCartItem.id },
+        data: {
+          quantity: {
+            increment: parsedQuantity,
+          },
+        },
+      });
+    } else {
+      // Create new cart item with modifiers
+      await prisma.cartItem.create({
+        data: {
+          userId,
+          menuItemId: parsedMenuItemId,
+          quantity: parsedQuantity,
+          imageUrl: menuItem.imageUrl,
+          modifiers: {
+            create: parsedModifiers,
+          },
+        },
+      });
+    }
 
     const items = await fetchUserCart(userId);
     res.status(201).json({ items: formatCartItems(items) });
@@ -93,35 +175,37 @@ exports.addItem = async (req, res) => {
 exports.updateItem = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const menuItemId = parseInt(req.params.menuItemId, 10);
+    const cartItemId = parseInt(req.params.menuItemId, 10); // This now represents cartItemId for items with modifiers
     const { quantity } = req.body || {};
     const parsedQuantity = parseInt(quantity, 10);
 
-    if (!menuItemId) {
-      return res.status(400).json({ error: "menuItemId is required" });
+    if (!cartItemId) {
+      return res.status(400).json({ error: "cartItemId is required" });
     }
 
     if (Number.isNaN(parsedQuantity)) {
       return res.status(400).json({ error: "quantity must be a number" });
     }
 
+    // Find the cart item and verify ownership
+    const cartItem = await prisma.cartItem.findFirst({
+      where: {
+        id: cartItemId,
+        userId,
+      },
+    });
+
+    if (!cartItem) {
+      return res.status(404).json({ error: "Cart item not found" });
+    }
+
     if (parsedQuantity <= 0) {
       await prisma.cartItem.delete({
-        where: {
-          userId_menuItemId: {
-            userId,
-            menuItemId,
-          },
-        },
+        where: { id: cartItemId },
       });
     } else {
       await prisma.cartItem.update({
-        where: {
-          userId_menuItemId: {
-            userId,
-            menuItemId,
-          },
-        },
+        where: { id: cartItemId },
         data: {
           quantity: parsedQuantity,
         },
@@ -142,19 +226,26 @@ exports.updateItem = async (req, res) => {
 exports.removeItem = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const menuItemId = parseInt(req.params.menuItemId, 10);
+    const cartItemId = parseInt(req.params.menuItemId, 10); // This now represents cartItemId
 
-    if (!menuItemId) {
-      return res.status(400).json({ error: "menuItemId is required" });
+    if (!cartItemId) {
+      return res.status(400).json({ error: "cartItemId is required" });
+    }
+
+    // Find the cart item and verify ownership
+    const cartItem = await prisma.cartItem.findFirst({
+      where: {
+        id: cartItemId,
+        userId,
+      },
+    });
+
+    if (!cartItem) {
+      return res.status(404).json({ error: "Cart item not found" });
     }
 
     await prisma.cartItem.delete({
-      where: {
-        userId_menuItemId: {
-          userId,
-          menuItemId,
-        },
-      },
+      where: { id: cartItemId },
     });
 
     const items = await fetchUserCart(userId);

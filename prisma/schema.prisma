@@ -97,6 +97,28 @@ model MenuItem {
   orderItems  OrderItem[]
   favorites   Favorite[]
   cartItems   CartItem[]
+  modifiers   MenuItemModifier[]
+}
+
+model MenuItemModifier {
+  id          Int      @id @default(autoincrement())
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItemId  Int
+  name        String   // "Extra Cheese", "Extra Patty", "Bacon"
+  nameEn      String?  // English translation
+  nameDe      String?  // German translation
+  price       Float    // Additional cost (e.g., 2.50)
+  category    String?  // Optional grouping: "Toppings", "Proteins", "Sauces"
+  isAvailable Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  maxQuantity Int      @default(5) // Max times this can be added
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  orderItemModifiers OrderItemModifier[]
+  cartItemModifiers  CartItemModifier[]
+  
+  @@index([menuItemId])
 }
 
 model Order {
@@ -127,6 +149,20 @@ model OrderItem {
   menuItemId Int
   quantity  Int      @default(1)
   loyaltyPointsMultiplier Float @default(1.0) // Store multiplier at time of order
+  modifiers OrderItemModifier[]
+}
+
+model OrderItemModifier {
+  id           Int              @id @default(autoincrement())
+  orderItem    OrderItem        @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  orderItemId  Int
+  modifier     MenuItemModifier @relation(fields: [modifierId], references: [id])
+  modifierId   Int
+  quantity     Int              @default(1)
+  priceAtOrder Float            // Snapshot of price at time of order
+  createdAt    DateTime         @default(now())
+  
+  @@index([orderItemId])
 }
 
 model Favorite {
@@ -150,8 +186,21 @@ model CartItem {
   imageUrl   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  modifiers  CartItemModifier[]
 
-  @@unique([userId, menuItemId])
+  @@index([userId, menuItemId])
+}
+
+model CartItemModifier {
+  id         Int              @id @default(autoincrement())
+  cartItem   CartItem         @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  cartItemId Int
+  modifier   MenuItemModifier @relation(fields: [modifierId], references: [id], onDelete: Cascade)
+  modifierId Int
+  quantity   Int              @default(1)
+  createdAt  DateTime         @default(now())
+  
+  @@index([cartItemId])
 }
 
 model Settings {
