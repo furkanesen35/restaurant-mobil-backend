@@ -12,8 +12,8 @@ const cartInclude = {
   },
 };
 
-const formatCartItems = (items = []) =>
-  items.map((item) => ({
+const formatCartItems = (items = []) => {
+  const formatted = items.map((item) => ({
     cartItemId: item.id,
     menuItemId: item.menuItemId.toString(),
     quantity: item.quantity,
@@ -35,6 +35,9 @@ const formatCartItems = (items = []) =>
       price: mod.modifier?.price || 0,
     })),
   }));
+  logger.info("formatCartItems output:", JSON.stringify(formatted, null, 2));
+  return formatted;
+};
 
 const fetchUserCart = async (userId) => {
   return prisma.cartItem.findMany({
@@ -59,6 +62,8 @@ exports.addItem = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { menuItemId, quantity = 1, modifiers = [] } = req.body || {};
+
+    logger.info("addItem request body:", JSON.stringify(req.body, null, 2));
 
     const parsedMenuItemId = parseInt(menuItemId, 10);
     const parsedQuantity = Math.max(1, parseInt(quantity, 10) || 1);
