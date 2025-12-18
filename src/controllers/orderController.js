@@ -158,14 +158,23 @@ exports.createOrder = async (req, res, next) => {
     }
 
     // Convert string IDs to integers and validate
-    const finalItems = processedItems.map((item) => ({
-      menuItemId: parseInt(item.menuItemId),
-      quantity: parseInt(item.quantity) || 1,
-      modifiers: Array.isArray(item.modifiers) ? item.modifiers.map(mod => ({
-        modifierId: parseInt(mod.modifierId),
-        quantity: parseInt(mod.quantity) || 1,
-      })) : [],
-    }));
+    const finalItems = processedItems.map((item) => {
+      // Convert modifiers from object to array if needed
+      let modifiersArray = item.modifiers;
+      if (item.modifiers && typeof item.modifiers === 'object' && !Array.isArray(item.modifiers)) {
+        modifiersArray = Object.values(item.modifiers);
+        logger.info("Converted modifiers object to array for item", item.menuItemId, ":", modifiersArray);
+      }
+      
+      return {
+        menuItemId: parseInt(item.menuItemId),
+        quantity: parseInt(item.quantity) || 1,
+        modifiers: Array.isArray(modifiersArray) ? modifiersArray.map(mod => ({
+          modifierId: parseInt(mod.modifierId),
+          quantity: parseInt(mod.quantity) || 1,
+        })) : [],
+      };
+    });
 
     // Validate that all menu items exist
     const menuItemIds = finalItems.map((item) => item.menuItemId);
