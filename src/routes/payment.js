@@ -15,4 +15,11 @@ router.post(
   paymentController.createStripePaymentIntent
 );
 
+// Link payment to order
+router.post(
+  "/link-order",
+  authenticate,
+  paymentController.linkPaymentToOrder
+);
+
 module.exports = router;

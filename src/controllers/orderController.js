@@ -93,8 +93,11 @@ exports.deleteOrder = async (req, res) => {
 const { PrismaClient } = require("../generated/prisma");
 const logger = require('../utils/logger');
 const prisma = new PrismaClient();
+const Stripe = require("stripe");
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const {
   sendOrderStatusNotification,
+  sendRefundNotification,
 } = require("./notificationsController");
 
 // Create a new order
@@ -476,15 +479,69 @@ exports.updateOrderStatus = async (req, res) => {
     const shouldDeductPoints =
       status === "cancelled" && existingOrder.status !== "cancelled";
 
+    // Check if we should process a refund
+    const shouldProcessRefund = 
+      status === "cancelled" && 
+      existingOrder.status !== "cancelled" &&
+      existingOrder.paymentIntentId &&
+      !existingOrder.refundId;
+
     logger.info(`[UPDATE STATUS] Should deduct points: ${shouldDeductPoints}`);
+    logger.info(`[UPDATE STATUS] Should process refund: ${shouldProcessRefund}, PaymentIntentId: ${existingOrder.paymentIntentId}`);
+
+    // Process Stripe refund if applicable
+    let refundResult = null;
+    if (shouldProcessRefund) {
+      try {
+        logger.info(`[UPDATE STATUS] Processing Stripe refund for PaymentIntent: ${existingOrder.paymentIntentId}`);
+        
+        // Create refund via Stripe API
+        const refund = await stripe.refunds.create({
+          payment_intent: existingOrder.paymentIntentId,
+          reason: 'requested_by_customer',
+        });
+
+        refundResult = {
+          refundId: refund.id,
+          refundStatus: refund.status, // 'pending', 'succeeded', 'failed', 'canceled'
+          refundAmount: refund.amount / 100, // Convert from cents to currency units
+          refundedAt: new Date(),
+        };
+
+        logger.info(`[UPDATE STATUS] Stripe refund created: ${refund.id}, Status: ${refund.status}, Amount: ${refundResult.refundAmount}`);
+      } catch (refundErr) {
+        // Log refund error but don't fail the cancellation
+        logger.error(`[UPDATE STATUS] Stripe refund failed:`, refundErr);
+        refundResult = {
+          refundId: null,
+          refundStatus: 'failed',
+          refundAmount: null,
+          refundedAt: null,
+          refundError: refundErr.message,
+        };
+      }
+    }
 
     // Update order status and handle loyalty points in transaction
     let updatedUser = null;
     const order = await prisma.$transaction(async (tx) => {
+      // Build update data
+      const updateData = { 
+        status,
+        ...(refundResult && refundResult.refundId ? {
+          refundId: refundResult.refundId,
+          refundStatus: refundResult.refundStatus,
+          refundAmount: refundResult.refundAmount,
+          refundedAt: refundResult.refundedAt,
+        } : refundResult?.refundStatus === 'failed' ? {
+          refundStatus: 'failed',
+        } : {}),
+      };
+
       // Update the order status
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
-        data: { status },
+        data: updateData,
         include: { items: true },
       });
 
@@ -511,14 +568,32 @@ exports.updateOrderStatus = async (req, res) => {
     logger.info(`[UPDATE STATUS] Order ${orderId} updated to ${status}`);
     logger.info(`[UPDATE STATUS] Response - loyaltyPointsDeducted: ${shouldDeductPoints ? loyaltyPointsToDeduct : 0}, loyaltyPointsBalance: ${updatedUser?.loyaltyPoints}`);
 
-    res.json({
+    // Build response with refund info
+    const response = {
       ...order,
       loyaltyPointsDeducted: shouldDeductPoints ? loyaltyPointsToDeduct : 0,
       loyaltyPointsBalance: updatedUser?.loyaltyPoints,
-    });
+    };
+
+    if (refundResult) {
+      response.refund = {
+        refundId: refundResult.refundId,
+        refundStatus: refundResult.refundStatus,
+        refundAmount: refundResult.refundAmount,
+        refundedAt: refundResult.refundedAt,
+        ...(refundResult.refundError && { error: refundResult.refundError }),
+      };
+    }
+
+    res.json(response);
 
     // Send push notification for status change
     sendOrderStatusNotification(orderId, status);
+
+    // Send refund notification if refund was processed
+    if (refundResult && refundResult.refundAmount) {
+      sendRefundNotification(orderId, refundResult.refundAmount, refundResult.refundStatus);
+    }
   } catch (err) {
     logger.error("[UPDATE STATUS] Error:", err);
     res.status(500).json({ error: "Server error", details: err.message });

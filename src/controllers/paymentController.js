@@ -125,6 +125,7 @@ exports.createStripePaymentIntent = async (req, res) => {
       amount,
       currency = "eur",
       payment_method_types = ["card"],
+      orderId, // Optional: Link payment to an existing order
     } = req.body;
     if (!amount) return res.status(400).json({ error: "Amount required" });
 
@@ -143,11 +144,66 @@ exports.createStripePaymentIntent = async (req, res) => {
       currency: currency.toLowerCase(),
       payment_method_types,
       description: "Restaurant order payment",
+      metadata: {
+        orderId: orderId ? String(orderId) : undefined,
+      },
     });
-    res.json({ clientSecret: paymentIntent.client_secret });
+
+    // If orderId is provided, update the order with paymentIntentId
+    if (orderId) {
+      await prisma.order.update({
+        where: { id: parseInt(orderId) },
+        data: { paymentIntentId: paymentIntent.id },
+      });
+    }
+
+    res.json({ 
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+    });
   } catch (err) {
     logger.error("Stripe error:", err);
     res.status(500).json({ error: "Payment failed", details: err.message });
+  }
+};
+
+// Link PaymentIntent to Order (called after order creation)
+exports.linkPaymentToOrder = async (req, res) => {
+  try {
+    const { orderId, paymentIntentId } = req.body;
+    
+    if (!orderId || !paymentIntentId) {
+      return res.status(400).json({ error: "orderId and paymentIntentId required" });
+    }
+
+    const userId = req.user.userId;
+    
+    // Verify the order belongs to the user
+    const order = await prisma.order.findFirst({
+      where: { 
+        id: parseInt(orderId),
+        userId: userId,
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    // Update order with paymentIntentId
+    const updatedOrder = await prisma.order.update({
+      where: { id: parseInt(orderId) },
+      data: { paymentIntentId },
+    });
+
+    res.json({ 
+      success: true, 
+      message: "Payment linked to order",
+      order: updatedOrder,
+    });
+  } catch (err) {
+    logger.error("Link payment error:", err);
+    res.status(500).json({ error: "Failed to link payment", details: err.message });
   }
 };
 

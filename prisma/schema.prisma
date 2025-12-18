@@ -109,6 +109,12 @@ model Order {
   status     String     @default("pending")
   estimatedDeliveryTime DateTime?
   loyaltyPointsAwarded Int @default(0)
+  // Payment & Refund fields
+  paymentIntentId String?   // Stripe PaymentIntent ID
+  refundId        String?   // Stripe Refund ID
+  refundStatus    String?   // pending, succeeded, failed, cancelled
+  refundAmount    Float?    // Amount refunded in currency units
+  refundedAt      DateTime? // When the refund was processed
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 }

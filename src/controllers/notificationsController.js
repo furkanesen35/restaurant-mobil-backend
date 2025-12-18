@@ -94,9 +94,43 @@ exports.sendOrderStatusNotification = async (orderId, status) => {
   }
 };
 
+// Send refund notification
+exports.sendRefundNotification = async (orderId, refundAmount, refundStatus) => {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { user: true },
+    });
+
+    if (!order) return;
+
+    let title, message;
+    if (refundStatus === "succeeded") {
+      title = "Refund Processed";
+      message = `Your refund of €${refundAmount.toFixed(2)} for order #${orderId} has been processed successfully.`;
+    } else if (refundStatus === "pending") {
+      title = "Refund Initiated";
+      message = `A refund of €${refundAmount.toFixed(2)} for order #${orderId} is being processed.`;
+    } else {
+      title = "Refund Update";
+      message = `There was an issue processing your refund for order #${orderId}. Please contact support.`;
+    }
+
+    await sendPushNotification(
+      order.userId,
+      title,
+      message,
+      { orderId, refundAmount, refundStatus }
+    );
+  } catch (err) {
+    logger.error("Error sending refund notification:", err);
+  }
+};
+
 module.exports = {
   registerPushToken: exports.registerPushToken,
   sendOrderStatusNotification: exports.sendOrderStatusNotification,
+  sendRefundNotification: exports.sendRefundNotification,
   sendPushNotification,
 };
 
