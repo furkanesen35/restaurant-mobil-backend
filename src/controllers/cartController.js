@@ -83,7 +83,9 @@ exports.addItem = async (req, res) => {
     // Validate modifiers if provided
     const parsedModifiers = [];
     if (modifiers && modifiers.length > 0) {
+      logger.info("Processing modifiers:", JSON.stringify(modifiers));
       const modifierIds = modifiers.map((m) => parseInt(m.modifierId, 10)).filter((id) => !isNaN(id));
+      logger.info("Parsed modifier IDs:", modifierIds, "for menuItemId:", parsedMenuItemId);
       
       if (modifierIds.length > 0) {
         const existingModifiers = await prisma.menuItemModifier.findMany({
@@ -93,6 +95,7 @@ exports.addItem = async (req, res) => {
             isAvailable: true,
           },
         });
+        logger.info("Found existing modifiers:", existingModifiers.length, JSON.stringify(existingModifiers));
 
         for (const mod of modifiers) {
           const modifierId = parseInt(mod.modifierId, 10);
@@ -100,6 +103,7 @@ exports.addItem = async (req, res) => {
           const existingMod = existingModifiers.find((m) => m.id === modifierId);
 
           if (!existingMod) {
+            logger.warn(`Modifier ${modifierId} not found for menuItem ${parsedMenuItemId}`);
             return res.status(400).json({
               error: `Modifier ${modifierId} is not valid for this menu item`,
             });
@@ -116,6 +120,7 @@ exports.addItem = async (req, res) => {
             quantity: modQuantity,
           });
         }
+        logger.info("Final parsedModifiers:", JSON.stringify(parsedModifiers));
       }
     }
 
