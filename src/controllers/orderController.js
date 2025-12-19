@@ -705,6 +705,13 @@ exports.updateOrderStatus = async (req, res) => {
     if (refundResult && refundResult.refundAmount) {
       sendRefundNotification(orderId, refundResult.refundAmount, refundResult.refundStatus);
     }
+
+    // Update behavior profile when order is delivered (async, don't wait)
+    if (status === 'delivered') {
+      const behaviorAnalysisService = require('../services/behaviorAnalysisService');
+      behaviorAnalysisService.updateUserProfile(existingOrder.userId)
+        .catch(err => logger.error('Failed to update behavior profile:', err));
+    }
   } catch (err) {
     logger.error("[UPDATE STATUS] Error:", err);
     res.status(500).json({ error: "Server error", details: err.message });

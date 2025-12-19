@@ -28,6 +28,14 @@ model User {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @default(now()) @updatedAt
   loyaltyPoints      Int       @default(0)
+  
+  // Consent management (GDPR compliance)
+  marketingConsent           Boolean   @default(false)  // Newsletter, promotions
+  behaviorTrackingConsent    Boolean   @default(false)  // Order pattern analysis
+  reminderNotificationsConsent Boolean @default(false)  // "Pizza?" type reminders
+  consentGivenAt             DateTime? // When consent was given
+  consentUpdatedAt           DateTime? // Last time consent was updated
+  
   orders             Order[]
   addresses          Address[]
   paymentMethods     PaymentMethod[]
@@ -35,6 +43,8 @@ model User {
   cartItems          CartItem[]
   createdTokens      VisitToken[] @relation("CreatedTokens")
   redeemedTokens     VisitToken[] @relation("RedeemedTokens")
+  behaviorProfile    BehaviorProfile?
+  notificationLogs   NotificationLog[]
 }
 
 model Address {
@@ -244,3 +254,44 @@ model VisitToken {
 
     @@index([isActive, sortOrder])
   }
+
+model BehaviorProfile {
+  id                    Int       @id @default(autoincrement())
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                Int       @unique
+  
+  // Pattern detection
+  mostOrderedItems      Json?     // Array of {menuItemId, name, count, lastOrdered}
+  commonOrderTimes      Json?     // Array of {hour, dayOfWeek, count}
+  averageOrderValue     Float?
+  lastOrderDate         DateTime?
+  orderFrequencyDays    Float?    // Average days between orders
+  
+  // Reminder settings
+  remindersSent         Int       @default(0)
+  lastReminderSent      DateTime?
+  remindersOptOut       Boolean   @default(false)
+  
+  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime  @default(now())
+  
+  @@index([userId])
+}
+
+model NotificationLog {
+  id              Int       @id @default(autoincrement())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          Int
+  type            String    // 'reminder', 'promotion', 'order_update'
+  templateId      String?
+  title           String
+  message         String
+  delivered       Boolean   @default(false)
+  opened          Boolean   @default(false)
+  sentAt          DateTime  @default(now())
+  openedAt        DateTime?
+  
+  @@index([userId])
+  @@index([type])
+  @@index([sentAt])
+}

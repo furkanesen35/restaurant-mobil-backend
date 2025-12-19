@@ -87,6 +87,9 @@ app.use("/api/loyalty", loyaltyRoutes);
 const menuModifiersRoutes = require("./routes/menuModifiers");
 app.use("/api/modifiers", menuModifiersRoutes);
 
+const consentRoutes = require("./routes/consent");
+app.use("/api/consent", consentRoutes);
+
 const emailLinksRoutes = require("./routes/email-links");
 app.use("/", emailLinksRoutes);
 
@@ -115,6 +118,13 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
+
+// Start scheduled jobs
+if (process.env.NODE_ENV === 'production' || process.env.ENABLE_JOBS === 'true') {
+  const { scheduleReminderJob } = require('./jobs/reminderJob');
+  scheduleReminderJob();
+  logger.info('Scheduled jobs started');
+}
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
