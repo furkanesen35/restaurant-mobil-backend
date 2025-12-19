@@ -124,7 +124,7 @@ exports.createStripePaymentIntent = async (req, res) => {
     const {
       amount,
       currency = "eur",
-      payment_method_types = ["card"],
+      paymentMethodType = "card", // 'card' or 'paypal'
       orderId, // Optional: Link payment to an existing order
     } = req.body;
     if (!amount) return res.status(400).json({ error: "Amount required" });
@@ -137,6 +137,14 @@ exports.createStripePaymentIntent = async (req, res) => {
         error: "Amount too small",
         message: `Minimum amount is ${minAmount} ${currency.toUpperCase()}`,
       });
+    }
+
+    // Determine payment method types based on paymentMethodType
+    let payment_method_types = [];
+    if (paymentMethodType === 'paypal') {
+      payment_method_types = ['paypal'];
+    } else {
+      payment_method_types = ['card'];
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
