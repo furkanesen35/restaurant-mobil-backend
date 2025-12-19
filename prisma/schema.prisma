@@ -114,11 +114,12 @@ model MenuItemModifier {
   id          Int      @id @default(autoincrement())
   menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   menuItemId  Int
-  name        String   // "Extra Cheese", "Extra Patty", "Bacon"
+  name        String   // "Extra Cheese", "No Tomato", "Well-Done"
   nameEn      String?  // English translation
   nameDe      String?  // German translation
-  price       Float    // Additional cost (e.g., 2.50)
-  category    String?  // Optional grouping: "Toppings", "Proteins", "Sauces"
+  price       Float    // Additional cost (0.00 for removals/preferences)
+  type        String   @default("addition") // "addition", "removal", "preparation"
+  category    String?  // Optional grouping: "Toppings", "Proteins", "Sauces", "Cooking Style"
   isAvailable Boolean  @default(true)
   sortOrder   Int      @default(0)
   maxQuantity Int      @default(5) // Max times this can be added
@@ -129,6 +130,7 @@ model MenuItemModifier {
   cartItemModifiers  CartItemModifier[]
   
   @@index([menuItemId])
+  @@index([type])
 }
 
 model Order {
@@ -158,6 +160,7 @@ model OrderItem {
   menuItem  MenuItem @relation(fields: [menuItemId], references: [id])
   menuItemId Int
   quantity  Int      @default(1)
+  specialInstructions String? // Free-text customization (max 200 chars)
   loyaltyPointsMultiplier Float @default(1.0) // Store multiplier at time of order
   modifiers OrderItemModifier[]
 }
@@ -193,6 +196,7 @@ model CartItem {
   menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   menuItemId Int
   quantity   Int      @default(1)
+  specialInstructions String? // Free-text customization (max 200 chars)
   imageUrl   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

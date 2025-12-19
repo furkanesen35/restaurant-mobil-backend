@@ -17,6 +17,7 @@ const formatCartItems = (items = []) => {
     cartItemId: item.id,
     menuItemId: item.menuItemId.toString(),
     quantity: item.quantity,
+    specialInstructions: item.specialInstructions || null,
     name: item.menuItem?.name || "",
     nameEn: item.menuItem?.nameEn || null,
     nameDe: item.menuItem?.nameDe || null,
@@ -33,6 +34,7 @@ const formatCartItems = (items = []) => {
       nameEn: mod.modifier?.nameEn || null,
       nameDe: mod.modifier?.nameDe || null,
       price: mod.modifier?.price || 0,
+      type: mod.modifier?.type || "addition",
     })),
   }));
   logger.info("formatCartItems output:", JSON.stringify(formatted, null, 2));
@@ -61,7 +63,7 @@ exports.getCart = async (req, res) => {
 exports.addItem = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { menuItemId, quantity = 1, modifiers = [] } = req.body || {};
+    const { menuItemId, quantity = 1, modifiers = [], specialInstructions } = req.body || {};
 
     logger.info("addItem request body:", JSON.stringify(req.body, null, 2));
 
@@ -70,6 +72,13 @@ exports.addItem = async (req, res) => {
 
     if (!parsedMenuItemId) {
       return res.status(400).json({ error: "menuItemId is required" });
+    }
+
+    // Validate special instructions length
+    if (specialInstructions && specialInstructions.length > 200) {
+      return res.status(400).json({
+        error: "Special instructions must be 200 characters or less",
+      });
     }
 
     const menuItem = await prisma.menuItem.findUnique({
@@ -118,6 +127,13 @@ exports.addItem = async (req, res) => {
             });
           }
 
+          // Validate type constraints
+          if ((existingMod.type === "removal" || existingMod.type === "preparation") && modQuantity !== 1) {
+            return res.status(400).json({
+              error: `${existingMod.type} modifiers can only have quantity of 1`,
+            });
+          }
+
           if (modQuantity > existingMod.maxQuantity) {
             return res.status(400).json({
               error: `Modifier "${existingMod.name}" can only be added up to ${existingMod.maxQuantity} times`,
@@ -144,7 +160,7 @@ exports.addItem = async (req, res) => {
       },
     });
 
-    // Find a cart item with matching modifiers
+    // Find a cart item with matching modifiers AND special instructions
     const modifiersKey = JSON.stringify(
       parsedModifiers.sort((a, b) => a.modifierId - b.modifierId)
     );
@@ -155,7 +171,9 @@ exports.addItem = async (req, res) => {
           .map((m) => ({ modifierId: m.modifierId, quantity: m.quantity }))
           .sort((a, b) => a.modifierId - b.modifierId)
       );
-      return existingModifiersKey === modifiersKey;
+      // Also match special instructions
+      const instructionsMatch = (cartItem.specialInstructions || "") === (specialInstructions || "");
+      return existingModifiersKey === modifiersKey && instructionsMatch;
     });
 
     if (matchingCartItem) {
@@ -169,12 +187,13 @@ exports.addItem = async (req, res) => {
         },
       });
     } else {
-      // Create new cart item with modifiers
+      // Create new cart item with modifiers and special instructions
       await prisma.cartItem.create({
         data: {
           userId,
           menuItemId: parsedMenuItemId,
           quantity: parsedQuantity,
+          specialInstructions: specialInstructions || null,
           imageUrl: menuItem.imageUrl,
           modifiers: {
             create: parsedModifiers,

@@ -26,13 +26,21 @@ exports.getModifiersForItem = async (req, res) => {
         isAvailable: true,
       },
       orderBy: [
+        { type: "asc" },       // Group by type first
         { category: "asc" },
         { sortOrder: "asc" },
         { name: "asc" },
       ],
     });
 
-    res.json({ modifiers });
+    // Group modifiers by type for easier frontend rendering
+    const grouped = {
+      additions: modifiers.filter((m) => m.type === "addition"),
+      removals: modifiers.filter((m) => m.type === "removal"),
+      preparations: modifiers.filter((m) => m.type === "preparation"),
+    };
+
+    res.json({ modifiers, grouped });
   } catch (err) {
     logger.error("Error fetching modifiers for menu item:", err);
     res.status(500).json({ error: "Server error", details: err.message });
@@ -76,6 +84,7 @@ exports.createModifier = async (req, res) => {
       nameEn,
       nameDe,
       price,
+      type,
       category,
       isAvailable,
       sortOrder,
@@ -100,6 +109,22 @@ exports.createModifier = async (req, res) => {
       return res.status(400).json({ error: "Invalid price" });
     }
 
+    // Validate type
+    const validTypes = ["addition", "removal", "preparation"];
+    const modifierType = type || "addition";
+    if (!validTypes.includes(modifierType)) {
+      return res.status(400).json({
+        error: "Invalid type. Must be: addition, removal, or preparation",
+      });
+    }
+
+    // Validate price constraints by type
+    if ((modifierType === "removal" || modifierType === "preparation") && parsedPrice !== 0) {
+      return res.status(400).json({
+        error: `${modifierType} modifiers must have price = 0`,
+      });
+    }
+
     // Check if menu item exists
     const menuItem = await prisma.menuItem.findUnique({
       where: { id: parsedMenuItemId },
@@ -116,6 +141,7 @@ exports.createModifier = async (req, res) => {
         nameEn: nameEn || null,
         nameDe: nameDe || null,
         price: parsedPrice,
+        type: modifierType,
         category: category || null,
         isAvailable: isAvailable !== undefined ? isAvailable : true,
         sortOrder: sortOrder !== undefined ? parseInt(sortOrder) : 0,
@@ -131,7 +157,7 @@ exports.createModifier = async (req, res) => {
       },
     });
 
-    logger.info(`Created modifier ${modifier.id} for menu item ${parsedMenuItemId}`);
+    logger.info(`Created ${modifierType} modifier ${modifier.id} for menu item ${parsedMenuItemId}`);
     res.status(201).json({ modifier });
   } catch (err) {
     logger.error("Error creating modifier:", err);
@@ -161,6 +187,7 @@ exports.updateModifier = async (req, res) => {
       nameEn,
       nameDe,
       price,
+      type,
       category,
       isAvailable,
       sortOrder,
@@ -172,13 +199,35 @@ exports.updateModifier = async (req, res) => {
     if (name !== undefined) updateData.name = name;
     if (nameEn !== undefined) updateData.nameEn = nameEn;
     if (nameDe !== undefined) updateData.nameDe = nameDe;
+    
+    // Validate and update type
+    if (type !== undefined) {
+      const validTypes = ["addition", "removal", "preparation"];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({
+          error: "Invalid type. Must be: addition, removal, or preparation",
+        });
+      }
+      updateData.type = type;
+    }
+    
     if (price !== undefined) {
       const parsedPrice = parseFloat(price);
       if (isNaN(parsedPrice) || parsedPrice < 0) {
         return res.status(400).json({ error: "Invalid price" });
       }
+      
+      // Validate price constraints by type
+      const modifierType = type || existingModifier.type;
+      if ((modifierType === "removal" || modifierType === "preparation") && parsedPrice !== 0) {
+        return res.status(400).json({
+          error: `${modifierType} modifiers must have price = 0`,
+        });
+      }
+      
       updateData.price = parsedPrice;
     }
+    
     if (category !== undefined) updateData.category = category;
     if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
     if (sortOrder !== undefined) updateData.sortOrder = parseInt(sortOrder);
