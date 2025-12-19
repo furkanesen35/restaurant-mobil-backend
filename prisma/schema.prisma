@@ -104,10 +104,16 @@ model MenuItem {
   isSpicy     Boolean @default(false)
   allergens   String? // Comma-separated list of allergens
   loyaltyPointsMultiplier Float @default(1.0) // Multiplier for loyalty points (e.g., 2.0 = double points)
+  
+  // Cooking preferences configuration
+  hasCookingOptions Boolean @default(false) // Whether to show cooking preference options
+  allowedCookingPreferences String[] @default([]) // e.g., ["rare", "medium", "well_done"]
+  
   orderItems  OrderItem[]
   favorites   Favorite[]
   cartItems   CartItem[]
   modifiers   MenuItemModifier[]
+  ingredients MenuItemIngredient[]
 }
 
 model MenuItemModifier {
@@ -161,8 +167,11 @@ model OrderItem {
   menuItemId Int
   quantity  Int      @default(1)
   specialInstructions String? // Free-text customization (max 200 chars)
+  cookingPreference String? // Selected cooking option: "rare", "medium", "well_done", etc.
+  cookingNotes String? // Additional cooking instructions text area
   loyaltyPointsMultiplier Float @default(1.0) // Store multiplier at time of order
   modifiers OrderItemModifier[]
+  ingredientCustomizations OrderItemIngredient[]
 }
 
 model OrderItemModifier {
@@ -197,10 +206,13 @@ model CartItem {
   menuItemId Int
   quantity   Int      @default(1)
   specialInstructions String? // Free-text customization (max 200 chars)
+  cookingPreference String? // Selected cooking option
+  cookingNotes String? // Additional cooking instructions
   imageUrl   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   modifiers  CartItemModifier[]
+  ingredientCustomizations CartItemIngredient[]
 
   @@index([userId, menuItemId])
 }
@@ -298,4 +310,66 @@ model NotificationLog {
   @@index([userId])
   @@index([type])
   @@index([sentAt])
+}
+
+// Master ingredient list
+model Ingredient {
+  id           Int       @id @default(autoincrement())
+  name         String    // Primary name
+  nameEn       String?   // English translation
+  nameDe       String?   // German translation
+  category     String    // "protein", "vegetable", "sauce", "bread", "cheese", "extras"
+  pricePerUnit Float     @default(0) // Price for each EXTRA unit
+  isAvailable  Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  menuItemIngredients  MenuItemIngredient[]
+  orderItemIngredients OrderItemIngredient[]
+  cartItemIngredients  CartItemIngredient[]
+  
+  @@index([category])
+  @@index([isAvailable])
+}
+
+// Junction table: Menu item's recipe (which ingredients it contains by default)
+model MenuItemIngredient {
+  id              Int       @id @default(autoincrement())
+  menuItem        MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItemId      Int
+  ingredient      Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  ingredientId    Int
+  defaultQuantity Int       @default(1) // How many come by default in the recipe
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([menuItemId, ingredientId])
+  @@index([menuItemId])
+  @@index([ingredientId])
+}
+
+// Stores customer's ingredient customizations in their order
+model OrderItemIngredient {
+  id           Int        @id @default(autoincrement())
+  orderItem    OrderItem  @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  orderItemId  Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  ingredientId Int
+  quantity     Int        // Customer's chosen quantity (can be 0 for removal)
+  
+  @@unique([orderItemId, ingredientId])
+  @@index([orderItemId])
+}
+
+// Stores customer's ingredient customizations in cart
+model CartItemIngredient {
+  id           Int        @id @default(autoincrement())
+  cartItem     CartItem   @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  cartItemId   Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  ingredientId Int
+  quantity     Int        // Customer's chosen quantity (can be 0 for removal)
+  
+  @@unique([cartItemId, ingredientId])
+  @@index([cartItemId])
 }

@@ -4,10 +4,23 @@ const logger = require("../utils/logger");
 const prisma = new PrismaClient();
 
 const cartInclude = {
-  menuItem: true,
+  menuItem: {
+    include: {
+      ingredients: {
+        include: {
+          ingredient: true,
+        },
+      },
+    },
+  },
   modifiers: {
     include: {
       modifier: true,
+    },
+  },
+  ingredientCustomizations: {
+    include: {
+      ingredient: true,
     },
   },
 };
@@ -18,6 +31,8 @@ const formatCartItems = (items = []) => {
     menuItemId: item.menuItemId.toString(),
     quantity: item.quantity,
     specialInstructions: item.specialInstructions || null,
+    cookingPreference: item.cookingPreference || null,
+    cookingNotes: item.cookingNotes || null,
     name: item.menuItem?.name || "",
     nameEn: item.menuItem?.nameEn || null,
     nameDe: item.menuItem?.nameDe || null,
@@ -27,6 +42,8 @@ const formatCartItems = (items = []) => {
     price: item.menuItem?.price || 0,
     imageUrl: item.imageUrl || item.menuItem?.imageUrl || null,
     categoryId: item.menuItem?.categoryId?.toString() || null,
+    hasCookingOptions: item.menuItem?.hasCookingOptions || false,
+    allowedCookingPreferences: item.menuItem?.allowedCookingPreferences || [],
     modifiers: (item.modifiers || []).map((mod) => ({
       modifierId: mod.modifierId,
       quantity: mod.quantity,
@@ -35,6 +52,24 @@ const formatCartItems = (items = []) => {
       nameDe: mod.modifier?.nameDe || null,
       price: mod.modifier?.price || 0,
       type: mod.modifier?.type || "addition",
+    })),
+    ingredients: (item.menuItem?.ingredients || []).map((ing) => ({
+      id: ing.id,
+      ingredientId: ing.ingredientId,
+      name: ing.ingredient?.name || "",
+      nameEn: ing.ingredient?.nameEn || null,
+      nameDe: ing.ingredient?.nameDe || null,
+      category: ing.ingredient?.category || "",
+      pricePerUnit: ing.ingredient?.pricePerUnit || 0,
+      defaultQuantity: ing.defaultQuantity,
+    })),
+    ingredientCustomizations: (item.ingredientCustomizations || []).map((custom) => ({
+      ingredientId: custom.ingredientId,
+      quantity: custom.quantity,
+      name: custom.ingredient?.name || "",
+      nameEn: custom.ingredient?.nameEn || null,
+      nameDe: custom.ingredient?.nameDe || null,
+      pricePerUnit: custom.ingredient?.pricePerUnit || 0,
     })),
   }));
   logger.info("formatCartItems output:", JSON.stringify(formatted, null, 2));
@@ -63,7 +98,7 @@ exports.getCart = async (req, res) => {
 exports.addItem = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { menuItemId, quantity = 1, modifiers = [], specialInstructions } = req.body || {};
+    const { menuItemId, quantity = 1, modifiers = [], specialInstructions, ingredientCustomizations = [], cookingPreference, cookingNotes } = req.body || {};
 
     logger.info("addItem request body:", JSON.stringify(req.body, null, 2));
 
@@ -81,8 +116,22 @@ exports.addItem = async (req, res) => {
       });
     }
 
+    // Validate cooking notes length
+    if (cookingNotes && cookingNotes.length > 200) {
+      return res.status(400).json({
+        error: "Cooking notes must be 200 characters or less",
+      });
+    }
+
     const menuItem = await prisma.menuItem.findUnique({
       where: { id: parsedMenuItemId },
+      include: {
+        ingredients: {
+          include: {
+            ingredient: true,
+          },
+        },
+      },
     });
 
     if (!menuItem) {
@@ -149,6 +198,56 @@ exports.addItem = async (req, res) => {
       }
     }
 
+    // Validate and process ingredient customizations
+    const parsedIngredientCustomizations = [];
+    if (ingredientCustomizations && Array.isArray(ingredientCustomizations) && ingredientCustomizations.length > 0) {
+      logger.info("Processing ingredient customizations:", JSON.stringify(ingredientCustomizations));
+      
+      const ingredientIds = ingredientCustomizations.map((i) => parseInt(i.ingredientId, 10)).filter((id) => !isNaN(id));
+      
+      if (ingredientIds.length > 0) {
+        // Verify all ingredients belong to this menu item
+        const menuItemIngredients = menuItem.ingredients || [];
+        const validIngredientIds = menuItemIngredients.map((mi) => mi.ingredientId);
+        
+        for (const custom of ingredientCustomizations) {
+          const ingredientId = parseInt(custom.ingredientId, 10);
+          const customQuantity = parseInt(custom.quantity, 10);
+          
+          if (!validIngredientIds.includes(ingredientId)) {
+            return res.status(400).json({
+              error: `Ingredient ${ingredientId} is not part of this menu item`,
+            });
+          }
+          
+          if (isNaN(customQuantity) || customQuantity < 0) {
+            return res.status(400).json({
+              error: "Ingredient quantity must be 0 or greater",
+            });
+          }
+          
+          parsedIngredientCustomizations.push({
+            ingredientId,
+            quantity: customQuantity,
+          });
+        }
+      }
+    }
+
+    // Validate cooking preference if provided
+    if (cookingPreference) {
+      if (!menuItem.hasCookingOptions) {
+        return res.status(400).json({
+          error: "This item does not have cooking options",
+        });
+      }
+      if (!menuItem.allowedCookingPreferences.includes(cookingPreference)) {
+        return res.status(400).json({
+          error: `Invalid cooking preference. Allowed values: ${menuItem.allowedCookingPreferences.join(", ")}`,
+        });
+      }
+    }
+
     // Check if a cart item with the same menu item and modifiers already exists
     const existingCartItems = await prisma.cartItem.findMany({
       where: {
@@ -157,12 +256,17 @@ exports.addItem = async (req, res) => {
       },
       include: {
         modifiers: true,
+        ingredientCustomizations: true,
       },
     });
 
-    // Find a cart item with matching modifiers AND special instructions
+    // Find a cart item with matching modifiers, special instructions, ingredients, and cooking preferences
     const modifiersKey = JSON.stringify(
       parsedModifiers.sort((a, b) => a.modifierId - b.modifierId)
+    );
+    
+    const ingredientsKey = JSON.stringify(
+      parsedIngredientCustomizations.sort((a, b) => a.ingredientId - b.ingredientId)
     );
     
     const matchingCartItem = existingCartItems.find((cartItem) => {
@@ -171,9 +275,23 @@ exports.addItem = async (req, res) => {
           .map((m) => ({ modifierId: m.modifierId, quantity: m.quantity }))
           .sort((a, b) => a.modifierId - b.modifierId)
       );
-      // Also match special instructions
+      
+      const existingIngredientsKey = JSON.stringify(
+        (cartItem.ingredientCustomizations || [])
+          .map((i) => ({ ingredientId: i.ingredientId, quantity: i.quantity }))
+          .sort((a, b) => a.ingredientId - b.ingredientId)
+      );
+      
+      // Match special instructions, cooking preference, and cooking notes
       const instructionsMatch = (cartItem.specialInstructions || "") === (specialInstructions || "");
-      return existingModifiersKey === modifiersKey && instructionsMatch;
+      const cookingPrefMatch = (cartItem.cookingPreference || "") === (cookingPreference || "");
+      const cookingNotesMatch = (cartItem.cookingNotes || "") === (cookingNotes || "");
+      
+      return existingModifiersKey === modifiersKey && 
+             existingIngredientsKey === ingredientsKey &&
+             instructionsMatch &&
+             cookingPrefMatch &&
+             cookingNotesMatch;
     });
 
     if (matchingCartItem) {
@@ -187,16 +305,21 @@ exports.addItem = async (req, res) => {
         },
       });
     } else {
-      // Create new cart item with modifiers and special instructions
+      // Create new cart item with modifiers, ingredients, cooking preferences, and special instructions
       await prisma.cartItem.create({
         data: {
           userId,
           menuItemId: parsedMenuItemId,
           quantity: parsedQuantity,
           specialInstructions: specialInstructions || null,
+          cookingPreference: cookingPreference || null,
+          cookingNotes: cookingNotes || null,
           imageUrl: menuItem.imageUrl,
           modifiers: {
             create: parsedModifiers,
+          },
+          ingredientCustomizations: {
+            create: parsedIngredientCustomizations,
           },
         },
       });

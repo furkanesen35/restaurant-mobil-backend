@@ -90,6 +90,12 @@ app.use("/api/modifiers", menuModifiersRoutes);
 const consentRoutes = require("./routes/consent");
 app.use("/api/consent", consentRoutes);
 
+const ingredientRoutes = require("./routes/ingredientRoutes");
+app.use("/api/ingredients", ingredientRoutes);
+
+const menuItemIngredientRoutes = require("./routes/menuItemIngredientRoutes");
+app.use("/api/menu-item-ingredients", menuItemIngredientRoutes);
+
 const emailLinksRoutes = require("./routes/email-links");
 app.use("/", emailLinksRoutes);
 

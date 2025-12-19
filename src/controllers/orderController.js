@@ -166,13 +166,25 @@ exports.createOrder = async (req, res, next) => {
         logger.info("Converted modifiers object to array for item", item.menuItemId, ":", modifiersArray);
       }
       
+      // Convert ingredient customizations from object to array if needed
+      let ingredientsArray = item.ingredientCustomizations;
+      if (item.ingredientCustomizations && typeof item.ingredientCustomizations === 'object' && !Array.isArray(item.ingredientCustomizations)) {
+        ingredientsArray = Object.values(item.ingredientCustomizations);
+      }
+      
       return {
         menuItemId: parseInt(item.menuItemId),
         quantity: parseInt(item.quantity) || 1,
         specialInstructions: item.specialInstructions || null,
+        cookingPreference: item.cookingPreference || null,
+        cookingNotes: item.cookingNotes || null,
         modifiers: Array.isArray(modifiersArray) ? modifiersArray.map(mod => ({
           modifierId: parseInt(mod.modifierId),
           quantity: parseInt(mod.quantity) || 1,
+        })) : [],
+        ingredientCustomizations: Array.isArray(ingredientsArray) ? ingredientsArray.map(ing => ({
+          ingredientId: parseInt(ing.ingredientId),
+          quantity: parseInt(ing.quantity) || 0,
         })) : [],
       };
     });
@@ -214,6 +226,14 @@ exports.createOrder = async (req, res, next) => {
           return res.status(400).json({
             error: "Invalid special instructions",
             message: "Special instructions must be 200 characters or less",
+          });
+        }
+
+        // Validate cooking notes length
+        if (item.cookingNotes && item.cookingNotes.length > 200) {
+          return res.status(400).json({
+            error: "Invalid cooking notes",
+            message: "Cooking notes must be 200 characters or less",
           });
         }
 
@@ -269,12 +289,15 @@ exports.createOrder = async (req, res, next) => {
         menuItemId: item.menuItemId,
         quantity: item.quantity,
         specialInstructions: item.specialInstructions,
+        cookingPreference: item.cookingPreference,
+        cookingNotes: item.cookingNotes,
         loyaltyPointsMultiplier: menuItem?.loyaltyPointsMultiplier || 1.0,
         modifiers: item.modifiers,
+        ingredientCustomizations: item.ingredientCustomizations || [],
       };
     });
 
-    // Calculate order total including modifiers
+    // Calculate order total including modifiers and ingredient customizations
     const orderTotal = finalItems.reduce((sum, item) => {
       const menuItem = existingItems.find((mi) => mi.id === item.menuItemId);
       const baseItemTotal = (menuItem?.price || 0) * item.quantity;
@@ -358,17 +381,25 @@ exports.createOrder = async (req, res, next) => {
       Date.now() + estimatedMinutes * 60 * 1000
     );
 
-    // Prepare order items data with modifiers and special instructions
+    // Prepare order items data with modifiers, ingredient customizations, cooking preferences, and special instructions
     const orderItemsData = finalItemsWithMultiplier.map((item) => ({
       menuItemId: item.menuItemId,
       quantity: item.quantity,
       specialInstructions: item.specialInstructions || null,
+      cookingPreference: item.cookingPreference || null,
+      cookingNotes: item.cookingNotes || null,
       loyaltyPointsMultiplier: item.loyaltyPointsMultiplier,
       modifiers: {
         create: item.modifiers.map((mod) => ({
           modifierId: mod.modifierId,
           quantity: mod.quantity,
           priceAtOrder: modifierMap[mod.modifierId]?.price || 0,
+        })),
+      },
+      ingredientCustomizations: {
+        create: (item.ingredientCustomizations || []).map((ing) => ({
+          ingredientId: ing.ingredientId,
+          quantity: ing.quantity,
         })),
       },
     }));
@@ -392,6 +423,11 @@ exports.createOrder = async (req, res, next) => {
               modifiers: {
                 include: {
                   modifier: true,
+                },
+              },
+              ingredientCustomizations: {
+                include: {
+                  ingredient: true,
                 },
               },
             },
@@ -490,6 +526,20 @@ exports.getUserOrders = async (req, res, next) => {
                     nameDe: true,
                     price: true,
                     type: true,
+                  },
+                },
+              },
+            },
+            ingredientCustomizations: {
+              include: {
+                ingredient: {
+                  select: {
+                    id: true,
+                    name: true,
+                    nameEn: true,
+                    nameDe: true,
+                    category: true,
+                    pricePerUnit: true,
                   },
                 },
               },
