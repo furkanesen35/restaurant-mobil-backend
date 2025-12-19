@@ -169,6 +169,7 @@ exports.createOrder = async (req, res, next) => {
       return {
         menuItemId: parseInt(item.menuItemId),
         quantity: parseInt(item.quantity) || 1,
+        specialInstructions: item.specialInstructions || null,
         modifiers: Array.isArray(modifiersArray) ? modifiersArray.map(mod => ({
           modifierId: parseInt(mod.modifierId),
           quantity: parseInt(mod.quantity) || 1,
@@ -208,6 +209,14 @@ exports.createOrder = async (req, res, next) => {
 
       // Validate all modifiers exist and belong to correct menu items
       for (const item of finalItems) {
+        // Validate special instructions length
+        if (item.specialInstructions && item.specialInstructions.length > 200) {
+          return res.status(400).json({
+            error: "Invalid special instructions",
+            message: "Special instructions must be 200 characters or less",
+          });
+        }
+
         for (const mod of item.modifiers) {
           const modifier = existingModifiers.find((m) => m.id === mod.modifierId);
           if (!modifier) {
@@ -222,6 +231,15 @@ exports.createOrder = async (req, res, next) => {
               message: `Modifier "${modifier.name}" cannot be added to this menu item`,
             });
           }
+          
+          // Validate type constraints
+          if ((modifier.type === "removal" || modifier.type === "preparation") && mod.quantity !== 1) {
+            return res.status(400).json({
+              error: "Invalid modifier quantity",
+              message: `${modifier.type} modifiers must have quantity of 1`,
+            });
+          }
+          
           if (mod.quantity > modifier.maxQuantity) {
             return res.status(400).json({
               error: "Invalid modifier quantity",
@@ -250,6 +268,7 @@ exports.createOrder = async (req, res, next) => {
       return {
         menuItemId: item.menuItemId,
         quantity: item.quantity,
+        specialInstructions: item.specialInstructions,
         loyaltyPointsMultiplier: menuItem?.loyaltyPointsMultiplier || 1.0,
         modifiers: item.modifiers,
       };
@@ -339,10 +358,11 @@ exports.createOrder = async (req, res, next) => {
       Date.now() + estimatedMinutes * 60 * 1000
     );
 
-    // Prepare order items data with modifiers
+    // Prepare order items data with modifiers and special instructions
     const orderItemsData = finalItemsWithMultiplier.map((item) => ({
       menuItemId: item.menuItemId,
       quantity: item.quantity,
+      specialInstructions: item.specialInstructions || null,
       loyaltyPointsMultiplier: item.loyaltyPointsMultiplier,
       modifiers: {
         create: item.modifiers.map((mod) => ({
@@ -468,6 +488,8 @@ exports.getUserOrders = async (req, res, next) => {
                     name: true,
                     nameEn: true,
                     nameDe: true,
+                    price: true,
+                    type: true,
                   },
                 },
               },
@@ -727,7 +749,23 @@ exports.getAllOrders = async (req, res) => {
         user: true,
         address: true,
         items: {
-          include: { menuItem: true },
+          include: {
+            menuItem: true,
+            modifiers: {
+              include: {
+                modifier: {
+                  select: {
+                    id: true,
+                    name: true,
+                    nameEn: true,
+                    nameDe: true,
+                    price: true,
+                    type: true,
+                  },
+                },
+              },
+            },
+          },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -763,6 +801,20 @@ exports.getMyOrders = async (req, res, next) => {
                 id: true,
                 name: true,
                 price: true,
+              },
+            },
+            modifiers: {
+              include: {
+                modifier: {
+                  select: {
+                    id: true,
+                    name: true,
+                    nameEn: true,
+                    nameDe: true,
+                    price: true,
+                    type: true,
+                  },
+                },
               },
             },
           },
