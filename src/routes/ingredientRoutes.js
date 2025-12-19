@@ -8,8 +8,7 @@ const {
   updateIngredient,
   deleteIngredient,
 } = require("../controllers/ingredientController");
-const { authenticate } = require("../middleware/auth");
-const { authorizeRoles } = require("../middleware/roleAuth");
+const { authenticate, requireAdmin } = require("../middleware/auth");
 
 // Public routes
 router.get("/", getAllIngredients);
@@ -17,8 +16,8 @@ router.get("/grouped", getIngredientsByCategory);
 router.get("/:id", getIngredient);
 
 // Admin routes
-router.post("/", authenticate, authorizeRoles("admin"), createIngredient);
-router.put("/:id", authenticate, authorizeRoles("admin"), updateIngredient);
-router.delete("/:id", authenticate, authorizeRoles("admin"), deleteIngredient);
+router.post("/", authenticate, requireAdmin, createIngredient);
+router.put("/", authenticate, requireAdmin, updateIngredient);
+router.delete("/", authenticate, requireAdmin, deleteIngredient);
 
 module.exports = router;

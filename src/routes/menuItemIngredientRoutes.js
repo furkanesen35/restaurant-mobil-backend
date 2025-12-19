@@ -7,8 +7,7 @@ const {
   removeIngredientFromMenuItem,
   setMenuItemIngredients,
 } = require("../controllers/menuItemIngredientController");
-const { authenticate } = require("../middleware/auth");
-const { authorizeRoles } = require("../middleware/roleAuth");
+const { authenticate, requireAdmin } = require("../middleware/auth");
 
 // Public routes - get ingredients for a menu item
 router.get("/menu-item/:menuItemId", getMenuItemIngredients);
@@ -17,21 +16,21 @@ router.get("/menu-item/:menuItemId", getMenuItemIngredients);
 router.post(
   "/menu-item/:menuItemId",
   authenticate,
-  authorizeRoles("admin"),
+  requireAdmin,
   addIngredientToMenuItem
 );
 
 router.put(
   "/:id",
   authenticate,
-  authorizeRoles("admin"),
+  requireAdmin,
   updateMenuItemIngredient
 );
 
 router.delete(
   "/:id",
   authenticate,
-  authorizeRoles("admin"),
+  requireAdmin,
   removeIngredientFromMenuItem
 );
 
@@ -39,7 +38,7 @@ router.delete(
 router.post(
   "/menu-item/:menuItemId/bulk",
   authenticate,
-  authorizeRoles("admin"),
+  requireAdmin,
   setMenuItemIngredients
 );
 
