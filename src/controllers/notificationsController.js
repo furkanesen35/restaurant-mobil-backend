@@ -173,15 +173,6 @@ exports.sendRefundNotification = async (orderId, refundAmount, refundStatus) => 
   }
 };
 
-module.exports = {
-  registerPushToken: exports.registerPushToken,
-  sendOrderStatusNotification: exports.sendOrderStatusNotification,
-  sendRefundNotification: exports.sendRefundNotification,
-  sendPushNotification,
-  getMessageTemplates: exports.getMessageTemplates,
-  sendAdminMessage: exports.sendAdminMessage,
-};
-
 // Get templates
 exports.getMessageTemplates = async (req, res) => {
   res.json(MESSAGE_TEMPLATES);
@@ -286,3 +277,11 @@ exports.sendAdminMessage = async (req, res) => {
   }
 };
 
+module.exports = {
+  registerPushToken: exports.registerPushToken,
+  sendOrderStatusNotification: exports.sendOrderStatusNotification,
+  sendRefundNotification: exports.sendRefundNotification,
+  sendPushNotification,
+  getMessageTemplates: exports.getMessageTemplates,
+  sendAdminMessage: exports.sendAdminMessage,
+};
