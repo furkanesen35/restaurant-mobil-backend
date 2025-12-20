@@ -78,6 +78,9 @@ app.use("/api/postal-codes", postalCodeRoutes);
 const notificationsRoutes = require("./routes/notifications");
 app.use("/api/notifications", notificationsRoutes);
 
+const deliveryRoutes = require("./routes/delivery");
+app.use("/api/delivery", deliveryRoutes);
+
 const settingsRoutes = require("./routes/settings");
 app.use("/api/settings", settingsRoutes);
 

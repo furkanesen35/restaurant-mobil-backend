@@ -574,7 +574,7 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     const orderId = parseInt(req.params.orderId);
-    const { status } = req.body;
+    const { status, message } = req.body;
     
     logger.info(`[UPDATE STATUS] Updating order ${orderId} to status: ${status}`);
     
@@ -583,6 +583,7 @@ exports.updateOrderStatus = async (req, res) => {
       "confirmed",
       "preparing",
       "ready",
+      "out_for_delivery",
       "delivered",
       "cancelled",
     ];
@@ -744,6 +745,15 @@ exports.updateOrderStatus = async (req, res) => {
         });
         logger.info(`[UPDATE STATUS] User's new loyalty points balance: ${updatedUser.loyaltyPoints}`);
       }
+
+      // Create status history entry
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: orderId,
+          status: status,
+          message: message || null
+        }
+      });
 
       return updatedOrder;
     });

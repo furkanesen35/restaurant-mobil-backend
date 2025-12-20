@@ -155,8 +155,19 @@ model Order {
   refundStatus    String?   // pending, succeeded, failed, cancelled
   refundAmount    Float?    // Amount refunded in currency units
   refundedAt      DateTime? // When the refund was processed
+  
+  // Driver & Tracking fields
+  driverName              String?   // Driver name
+  driverPhone             String?   // Driver phone
+  driverLatitude          Float?    // Driver's current latitude
+  driverLongitude         Float?    // Driver's current longitude
+  driverLocationUpdatedAt DateTime? // Last location update timestamp
+  
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
+  
+  statusHistory    OrderStatusHistory[]
+  locationHistory  DriverLocationHistory[]
 }
 
 model OrderItem {
@@ -372,4 +383,30 @@ model CartItemIngredient {
   
   @@unique([cartItemId, ingredientId])
   @@index([cartItemId])
+}
+
+// Order status history for tracking
+model OrderStatusHistory {
+  id        Int      @id @default(autoincrement())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   Int
+  status    String   // "pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered", "cancelled"
+  message   String?  // Optional message: "Driver picked up your order"
+  timestamp DateTime @default(now())
+  
+  @@index([orderId])
+  @@index([timestamp])
+}
+
+// Driver location history for tracking deliveries
+model DriverLocationHistory {
+  id        Int      @id @default(autoincrement())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   Int
+  latitude  Float
+  longitude Float
+  timestamp DateTime @default(now())
+  
+  @@index([orderId])
+  @@index([timestamp])
 }
