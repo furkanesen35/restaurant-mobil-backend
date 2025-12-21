@@ -21,8 +21,11 @@ class DriverTrackingService {
       throw new Error('Order not found');
     }
 
-    if (order.status !== 'out_for_delivery') {
-      throw new Error('Order is not out for delivery');
+    // Allow tracking for 'ready' orders with driver assigned OR 'out_for_delivery' orders
+    const canTrack = order.status === 'out_for_delivery' || 
+                     (order.status === 'ready' && order.driverName);
+    if (!canTrack) {
+      throw new Error('Order is not ready for delivery tracking');
     }
 
     if (!order.address) {

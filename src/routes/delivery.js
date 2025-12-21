@@ -52,22 +52,21 @@ router.post("/assign-driver/:orderId", authenticate, requireAdmin, async (req, r
       ? new Date(Date.now() + estimatedMinutes * 60000)
       : null;
 
-    // Update order with driver info and status
+    // Update order with driver info (keep status as 'ready' - no out_for_delivery)
     const updatedOrder = await prisma.order.update({
       where: { id: parseInt(orderId) },
       data: {
         driverName,
         driverPhone: driverPhone || null,
-        status: 'out_for_delivery',
         estimatedDeliveryTime: eta
       }
     });
 
-    // Create status history entry
+    // Create status history entry for driver assignment
     await prisma.orderStatusHistory.create({
       data: {
         orderId: parseInt(orderId),
-        status: 'out_for_delivery',
+        status: 'ready',
         message: `${driverName} is on the way with your order`
       }
     });
@@ -78,7 +77,7 @@ router.post("/assign-driver/:orderId", authenticate, requireAdmin, async (req, r
         await sendOrderStatusNotification(
           order.userId,
           parseInt(orderId),
-          'out_for_delivery'
+          'ready'  // Keep as 'ready', notification will include driver info
         );
       } catch (notifError) {
         logger.error('Failed to send notification:', notifError);
@@ -189,9 +188,12 @@ router.post("/mark-delivered/:orderId", authenticate, requireAdmin, async (req, 
       return res.status(404).json({ error: "Order not found" });
     }
 
-    if (order.status !== 'out_for_delivery') {
+    // Allow marking as delivered from 'ready' (with driver) or 'out_for_delivery'
+    const canDeliver = order.status === 'out_for_delivery' || 
+                       (order.status === 'ready' && order.driverName);
+    if (!canDeliver) {
       return res.status(400).json({ 
-        error: "Order must be 'out_for_delivery' to mark as delivered",
+        error: "Order must be 'ready' with driver assigned to mark as delivered",
         currentStatus: order.status
       });
     }
