@@ -19,13 +19,25 @@ router.post(
   orderController.createOrder
 );
 
+// Get all orders (admin only) - MUST come before /:orderId
+router.get("/all", authenticate, requireAdmin, orderController.getAllOrders);
+
+// Get user's own orders - MUST come before /:orderId
+router.get("/my-orders", authenticate, orderController.getMyOrders);
+
 // Get all orders for a user (requires authentication)
 router.get("/user/:userId", authenticate, orderController.getUserOrders);
 
-// Get single order by ID (requires authentication)
+// Get single order by ID (requires authentication) - MUST come after specific routes
 router.get("/:orderId", authenticate, orderController.getOrderById);
 
 // Update order status (admin only)
+router.patch(
+  "/:orderId/status",
+  authenticate,
+  orderValidation.updateStatus,
+  orderController.updateOrderStatus
+);
 
 // Delete an order (admin only)
 router.delete(
@@ -34,18 +46,6 @@ router.delete(
   requireAdmin,
   orderController.deleteOrder
 );
-router.patch(
-  "/:orderId/status",
-  authenticate,
-  orderValidation.updateStatus,
-  orderController.updateOrderStatus
-);
-
-// Get all orders (admin only)
-router.get("/all", authenticate, requireAdmin, orderController.getAllOrders);
-
-// Get user's own orders
-router.get("/my-orders", authenticate, orderController.getMyOrders);
 
 // Test endpoint
 router.get("/test", (req, res) => {
