@@ -10,7 +10,7 @@ const {
 } = require("../middleware/rateLimiter");
 
 // Apply rate limiting to all auth routes
-// router.use(authLimiter); // [TEMPORARY] Rate limiting disabled for development. REMEMBER TO RE-ENABLE BEFORE PRODUCTION!
+router.use(authLimiter);
 
 // Register user
 router.post(

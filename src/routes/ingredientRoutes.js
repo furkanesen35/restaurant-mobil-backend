@@ -17,7 +17,7 @@ router.get("/:id", getIngredient);
 
 // Admin routes
 router.post("/", authenticate, requireAdmin, createIngredient);
-router.put("/", authenticate, requireAdmin, updateIngredient);
-router.delete("/", authenticate, requireAdmin, deleteIngredient);
+router.put("/:id", authenticate, requireAdmin, updateIngredient);
+router.delete("/:id", authenticate, requireAdmin, deleteIngredient);
 
 module.exports = router;

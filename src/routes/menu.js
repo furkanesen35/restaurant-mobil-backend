@@ -43,7 +43,7 @@ router.delete(
   menuController.deleteMenuItem
 );
 
-// Seed menu data (for development only)
-router.post("/seed", menuController.seedMenu);
+// Seed menu data (admin only, for development)
+router.post("/seed", authenticate, requireAdmin, menuController.seedMenu);
 
 module.exports = router;

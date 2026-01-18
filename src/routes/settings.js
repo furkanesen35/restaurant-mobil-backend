@@ -6,6 +6,7 @@ const {
   updateSetting,
   deleteSetting
 } = require('../controllers/settingsController');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
 // GET all settings
 router.get('/', getAllSettings);
@@ -13,10 +14,10 @@ router.get('/', getAllSettings);
 // GET a specific setting
 router.get('/:key', getSetting);
 
-// PUT update or create a setting (admin only - you may want to add auth middleware)
-router.put('/:key', updateSetting);
+// PUT update or create a setting (admin only)
+router.put('/:key', authenticate, requireAdmin, updateSetting);
 
-// DELETE a setting (admin only - you may want to add auth middleware)
-router.delete('/:key', deleteSetting);
+// DELETE a setting (admin only)
+router.delete('/:key', authenticate, requireAdmin, deleteSetting);
 
 module.exports = router;
