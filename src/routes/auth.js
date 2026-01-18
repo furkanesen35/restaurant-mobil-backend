@@ -50,4 +50,7 @@ router.post("/refresh", authController.refreshToken);
 // Get current user (validates token)
 router.get("/me", authenticate, authController.getCurrentUser);
 
+// Update user profile
+router.put("/profile", authenticate, authController.updateProfile);
+
 module.exports = router;

@@ -178,6 +178,82 @@ exports.getMessageTemplates = async (req, res) => {
   res.json(MESSAGE_TEMPLATES);
 };
 
+// Get notification history for user
+exports.getNotificationHistory = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { limit = 50, offset = 0, type } = req.query;
+
+    const whereClause = { userId };
+    if (type) {
+      whereClause.type = type;
+    }
+
+    const [notifications, total] = await Promise.all([
+      prisma.notificationLog.findMany({
+        where: whereClause,
+        orderBy: { sentAt: "desc" },
+        take: parseInt(limit),
+        skip: parseInt(offset),
+        select: {
+          id: true,
+          type: true,
+          templateId: true,
+          title: true,
+          message: true,
+          delivered: true,
+          opened: true,
+          sentAt: true,
+          openedAt: true,
+        },
+      }),
+      prisma.notificationLog.count({ where: whereClause }),
+    ]);
+
+    res.json({
+      notifications,
+      pagination: {
+        total,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: parseInt(offset) + notifications.length < total,
+      },
+    });
+  } catch (err) {
+    logger.error("Get notification history error:", err);
+    res.status(500).json({ error: "Server error", details: err.message });
+  }
+};
+
+// Mark notification as opened
+exports.markNotificationOpened = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const notificationId = parseInt(req.params.notificationId);
+
+    const notification = await prisma.notificationLog.findFirst({
+      where: { id: notificationId, userId },
+    });
+
+    if (!notification) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
+
+    await prisma.notificationLog.update({
+      where: { id: notificationId },
+      data: {
+        opened: true,
+        openedAt: new Date(),
+      },
+    });
+
+    res.json({ message: "Notification marked as opened" });
+  } catch (err) {
+    logger.error("Mark notification opened error:", err);
+    res.status(500).json({ error: "Server error", details: err.message });
+  }
+};
+
 // Send custom admin message
 exports.sendAdminMessage = async (req, res) => {
   try {
@@ -284,4 +360,6 @@ module.exports = {
   sendPushNotification,
   getMessageTemplates: exports.getMessageTemplates,
   sendAdminMessage: exports.sendAdminMessage,
+  getNotificationHistory: exports.getNotificationHistory,
+  markNotificationOpened: exports.markNotificationOpened,
 };

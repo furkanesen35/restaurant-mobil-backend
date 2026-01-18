@@ -131,7 +131,9 @@ const PORT = process.env.PORT || 3000;
 // Start scheduled jobs
 if (process.env.NODE_ENV === 'production' || process.env.ENABLE_JOBS === 'true') {
   const { scheduleReminderJob } = require('./jobs/reminderJob');
+  const { scheduleCleanupJob } = require('./jobs/cleanupJob');
   scheduleReminderJob();
+  scheduleCleanupJob();
   logger.info('Scheduled jobs started');
 }
 

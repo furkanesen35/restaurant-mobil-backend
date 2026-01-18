@@ -559,6 +559,108 @@ exports.getUserOrders = async (req, res, next) => {
   }
 };
 
+// Get single order by ID
+exports.getOrderById = async (req, res, next) => {
+  try {
+    const orderId = parseInt(req.params.orderId);
+    const tokenUserId = req.user?.userId;
+    const isAdmin = req.user?.role === "admin";
+
+    if (!orderId || orderId < 1) {
+      return res.status(400).json({
+        error: "Invalid order ID",
+        message: "Valid order ID is required",
+      });
+    }
+
+    logger.info("Fetching order:", orderId);
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        address: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        items: {
+          include: {
+            menuItem: {
+              select: {
+                id: true,
+                name: true,
+                nameEn: true,
+                nameDe: true,
+                price: true,
+                imageUrl: true,
+              },
+            },
+            modifiers: {
+              include: {
+                modifier: {
+                  select: {
+                    id: true,
+                    name: true,
+                    nameEn: true,
+                    nameDe: true,
+                    price: true,
+                    type: true,
+                  },
+                },
+              },
+            },
+            ingredientCustomizations: {
+              include: {
+                ingredient: {
+                  select: {
+                    id: true,
+                    name: true,
+                    nameEn: true,
+                    nameDe: true,
+                    category: true,
+                    pricePerUnit: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        statusHistory: {
+          orderBy: { timestamp: "asc" },
+        },
+        locationHistory: {
+          orderBy: { timestamp: "desc" },
+          take: 10,
+        },
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        error: "Order not found",
+        message: `Order with ID ${orderId} does not exist`,
+      });
+    }
+
+    // Check authorization - user can only view their own orders unless admin
+    if (!isAdmin && order.userId !== tokenUserId) {
+      return res.status(403).json({
+        error: "Forbidden",
+        message: "You can only view your own orders",
+      });
+    }
+
+    logger.info(`Found order ${orderId}`);
+    res.json(order);
+  } catch (err) {
+    logger.error("Get order by ID error:", err);
+    next(err);
+  }
+};
+
 // Update order status (admin or kitchen)
 exports.updateOrderStatus = async (req, res) => {
   try {

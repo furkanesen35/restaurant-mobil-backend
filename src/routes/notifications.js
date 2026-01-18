@@ -6,6 +6,12 @@ const { authenticate, requireAdmin } = require("../middleware/auth");
 // Register push token (requires authentication)
 router.post("/register", authenticate, notificationsController.registerPushToken);
 
+// Get notification history for current user
+router.get("/history", authenticate, notificationsController.getNotificationHistory);
+
+// Mark notification as opened
+router.patch("/:notificationId/opened", authenticate, notificationsController.markNotificationOpened);
+
 // NEW: Admin send custom message
 router.post(
   "/send-admin-message",

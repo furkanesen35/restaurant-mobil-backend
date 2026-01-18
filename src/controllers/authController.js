@@ -503,3 +503,53 @@ exports.getCurrentUser = async (req, res, next) => {
     next(err);
   }
 };
+
+// Update user profile
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({
+        error: "Validation failed",
+        message: "Name is required and cannot be empty",
+      });
+    }
+
+    const trimmedName = name.trim();
+    if (trimmedName.length > 100) {
+      return res.status(400).json({
+        error: "Validation failed",
+        message: "Name cannot exceed 100 characters",
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { name: trimmedName },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isVerified: true,
+        loyaltyPoints: true,
+        createdAt: true,
+      },
+    });
+
+    logger.info("User profile updated", { userId, name: trimmedName });
+
+    res.json({
+      message: "Profile updated successfully",
+      user: {
+        ...updatedUser,
+        isEmailVerified: updatedUser.isVerified,
+      },
+    });
+  } catch (err) {
+    logger.error("Update profile error", { error: err.message });
+    next(err);
+  }
+};

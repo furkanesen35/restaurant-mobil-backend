@@ -22,6 +22,9 @@ router.post(
 // Get all orders for a user (requires authentication)
 router.get("/user/:userId", authenticate, orderController.getUserOrders);
 
+// Get single order by ID (requires authentication)
+router.get("/:orderId", authenticate, orderController.getOrderById);
+
 // Update order status (admin only)
 
 // Delete an order (admin only)
