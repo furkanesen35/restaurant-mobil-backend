@@ -53,4 +53,7 @@ router.get("/me", authenticate, authController.getCurrentUser);
 // Update user profile
 router.put("/profile", authenticate, authController.updateProfile);
 
+// Delete user account
+router.delete("/account", authenticate, authController.deleteAccount);
+
 module.exports = router;

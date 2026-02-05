@@ -553,3 +553,72 @@ exports.updateProfile = async (req, res, next) => {
     next(err);
   }
 };
+
+// Delete user account
+exports.deleteAccount = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+
+    logger.info("Account deletion requested", { userId });
+
+    // Start a transaction to ensure all deletions happen atomically
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete or nullify visit tokens created by the user
+      await tx.visitToken.updateMany({
+        where: { createdById: userId },
+        data: { createdById: null },
+      });
+
+      // 2. Nullify redeemed tokens (keep the token but remove user reference)
+      await tx.visitToken.updateMany({
+        where: { redeemedById: userId },
+        data: { redeemedById: null },
+      });
+
+      // 3. Delete payment methods (not cascaded)
+      await tx.paymentMethod.deleteMany({
+        where: { userId },
+      });
+
+      // 4. Anonymize orders (important for business records and accounting)
+      // Keep the orders but remove personal information
+      const orders = await tx.order.findMany({
+        where: { userId },
+        select: { id: true },
+      });
+
+      if (orders.length > 0) {
+        const orderIds = orders.map(o => o.id);
+        // Update orders to mark them as anonymized
+        await tx.order.updateMany({
+          where: { id: { in: orderIds } },
+          data: {
+            userId: null, // Remove user reference
+          },
+        });
+      }
+
+      // 5. Delete items with cascade (will auto-delete):
+      // - addresses (onDelete: Cascade)
+      // - favorites (onDelete: Cascade)
+      // - cartItems (onDelete: Cascade)
+      // - behaviorProfile (onDelete: Cascade)
+      // - notificationLogs (onDelete: Cascade)
+
+      // 6. Finally, delete the user account
+      await tx.user.delete({
+        where: { id: userId },
+      });
+
+      logger.info("Account successfully deleted", { userId });
+    });
+
+    res.json({
+      message: "Account deleted successfully",
+      success: true,
+    });
+  } catch (err) {
+    logger.error("Delete account error", { error: err.message, stack: err.stack });
+    next(err);
+  }
+};
