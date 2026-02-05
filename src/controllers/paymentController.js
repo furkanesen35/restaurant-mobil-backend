@@ -16,16 +16,18 @@ exports.createPaymentMethod = async (req, res) => {
       paypalEmail,
       isDefault,
       saveToProfile = true,
+      stripePaymentMethodId, // Stripe payment method ID for reuse
     } = req.body;
     const userId = req.user.userId;
     const paymentMethod = await prisma.paymentMethod.create({
       data: {
         type,
-        cardNumber,
+        cardNumber, // Should be last 4 digits only
         cardHolder,
         expiry,
         brand,
         paypalEmail,
+        stripePaymentMethodId, // Store Stripe PM ID
         isDefault,
         temporary: !saveToProfile, // Mark as temporary if not saving to profile
         userId,
@@ -33,6 +35,7 @@ exports.createPaymentMethod = async (req, res) => {
     });
     res.status(201).json(paymentMethod);
   } catch (err) {
+    logger.error("Create payment method error:", err);
     res.status(400).json({ error: err.message });
   }
 };
@@ -126,6 +129,7 @@ exports.createStripePaymentIntent = async (req, res) => {
       currency = "eur",
       paymentMethodType = "card", // 'card' or 'paypal'
       orderId, // Optional: Link payment to an existing order
+      savedPaymentMethodId, // ID of saved payment method from our database
     } = req.body;
     if (!amount) return res.status(400).json({ error: "Amount required" });
 
@@ -139,6 +143,34 @@ exports.createStripePaymentIntent = async (req, res) => {
       });
     }
 
+    const userId = req.user.userId;
+    let stripePaymentMethodId = null;
+
+    // If using a saved payment method, get the Stripe payment method ID
+    if (savedPaymentMethodId) {
+      const savedMethod = await prisma.paymentMethod.findFirst({
+        where: {
+          id: parseInt(savedPaymentMethodId),
+          userId: userId,
+          temporary: false,
+        },
+      });
+
+      if (!savedMethod) {
+        return res.status(404).json({ error: "Saved payment method not found" });
+      }
+
+      if (!savedMethod.stripePaymentMethodId) {
+        return res.status(400).json({
+          error: "Invalid saved payment method",
+          message: "This payment method cannot be reused. Please add a new card.",
+        });
+      }
+
+      stripePaymentMethodId = savedMethod.stripePaymentMethodId;
+      logger.info("Using saved Stripe payment method:", stripePaymentMethodId);
+    }
+
     // Determine payment method types based on paymentMethodType
     let payment_method_types = [];
     if (paymentMethodType === 'paypal') {
@@ -147,15 +179,26 @@ exports.createStripePaymentIntent = async (req, res) => {
       payment_method_types = ['card'];
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Create payment intent with or without saved payment method
+    const paymentIntentData = {
       amount: Math.round(amount * 100), // Stripe expects cents
       currency: currency.toLowerCase(),
-      payment_method_types,
       description: "Restaurant order payment",
       metadata: {
         orderId: orderId ? String(orderId) : undefined,
       },
-    });
+    };
+
+    // If using saved payment method, attach it and set confirmation method
+    if (stripePaymentMethodId) {
+      paymentIntentData.payment_method = stripePaymentMethodId;
+      paymentIntentData.confirm = true; // Auto-confirm with saved method
+      paymentIntentData.off_session = true; // For saved cards
+    } else {
+      paymentIntentData.payment_method_types = payment_method_types;
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
 
     // If orderId is provided, update the order with paymentIntentId
     if (orderId) {
@@ -168,6 +211,7 @@ exports.createStripePaymentIntent = async (req, res) => {
     res.json({ 
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
+      status: paymentIntent.status, // Include status for saved card payments
     });
   } catch (err) {
     logger.error("Stripe error:", err);
