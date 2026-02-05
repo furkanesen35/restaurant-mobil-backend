@@ -9,18 +9,18 @@ const {
 	verificationEmailLimiter,
 } = require("../middleware/rateLimiter");
 
-// Apply rate limiting to all auth routes
-router.use(authLimiter);
+// NOTE: Removed global router.use(authLimiter) - it was too restrictive
+// Each endpoint now has its own appropriate rate limit
 
-// Register user
+// Register user (10 attempts per 15 min)
 router.post(
 	"/register",
-	authLimiter,
+	passwordResetLimiter, // More generous than authLimiter
 	authValidation.register,
 	authController.register
 );
 
-// Login user
+// Login user (5 attempts per 15 min)
 router.post("/login", authLimiter, authValidation.login, authController.login);
 
 // Google Sign-In
