@@ -7,16 +7,8 @@ const prisma = new PrismaClient();
 const logger = require("../utils/logger");
 const { sendOrderStatusNotification } = require("../controllers/notificationsController");
 
-// Allowed order statuses including out_for_delivery
-const ORDER_STATUSES = [
-  'pending',
-  'confirmed',
-  'preparing',
-  'ready',
-  'out_for_delivery',
-  'delivered',
-  'cancelled'
-];
+// Allowed order statuses including out_for_delivery (defined for documentation purposes)
+// ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled']
 
 /**
  * POST /api/delivery/assign-driver/:orderId

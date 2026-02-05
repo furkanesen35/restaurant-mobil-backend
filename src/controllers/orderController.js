@@ -276,12 +276,6 @@ exports.createOrder = async (req, res, next) => {
       return acc;
     }, {});
 
-    // Create item map for quantities and multipliers
-    const itemQuantityMap = finalItems.reduce((acc, item) => {
-      acc[item.menuItemId] = item.quantity;
-      return acc;
-    }, {});
-
     // Add multiplier and modifiers to finalItems from existing menu items
     const finalItemsWithMultiplier = finalItems.map((item) => {
       const menuItem = existingItems.find((mi) => mi.id === item.menuItemId);

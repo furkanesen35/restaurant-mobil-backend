@@ -39,8 +39,7 @@ router.get("/verify-email", (req, res) => {
       .send(renderErrorPage("❌ Invalid Link", "Verification token is missing."));
   }
 
-  const safeToken = sanitize(token);
-
+  // Token is sanitized via JSON.stringify when embedded in the script
   const html = `
     <!DOCTYPE html>
     <html>

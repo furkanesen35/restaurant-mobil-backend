@@ -17,7 +17,7 @@ const getEmailLinkOrigins = () => {
     if (url.protocol === "http:") {
       origins.push(`https://${url.host}`);
     }
-  } catch (error) {
+  } catch {
     // Ignore parsing errors and fall back to defaults
   }
 

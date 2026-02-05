@@ -313,9 +313,8 @@ exports.sendAdminMessage = async (req, res) => {
     }
 
     // Send push notification
-    let pushResult = null;
     if (targetUser.pushToken) {
-      pushResult = await sendPushNotification(
+      await sendPushNotification(
         userId,
         notificationTitle,
         notificationMessage,
