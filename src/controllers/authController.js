@@ -299,13 +299,14 @@ exports.register = async (req, res, next) => {
     }
 
     const { email, password } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
 
-    logger.info("User registration attempt", { email });
+    logger.info("User registration attempt", { email: normalizedEmail });
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existingUser) {
-      logger.warn("Registration failed - email already exists", { email });
+      logger.warn("Registration failed - email already exists", { email: normalizedEmail });
       return res.status(409).json({
         error: "Email already in use",
         message: "An account with this email already exists",
@@ -316,8 +317,8 @@ exports.register = async (req, res, next) => {
     const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Generate username from email
-    const username = email.split("@")[0];
+    // Generate username from email (keep first part before @)
+    const username = normalizedEmail.split("@")[0];
 
     // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
@@ -326,7 +327,7 @@ exports.register = async (req, res, next) => {
     const user = await prisma.user.create({
       data: {
         name: username,
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         password: hashedPassword,
         verificationToken: verificationToken,
       },
@@ -384,15 +385,16 @@ exports.login = async (req, res, next) => {
     }
 
     const { email, password } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
 
-    logger.info("Login attempt", { email });
+    logger.info("Login attempt", { email: normalizedEmail });
 
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
     });
     if (!user) {
-      logger.warn("Login failed - user not found", { email });
+      logger.warn("Login failed - user not found", { email: normalizedEmail });
       return res.status(401).json({
         error: "Invalid credentials",
         message: "Email or password is incorrect",
@@ -403,7 +405,7 @@ exports.login = async (req, res, next) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       logger.warn("Login failed - invalid password", {
-        email,
+        email: normalizedEmail,
         userId: user.id,
       });
       return res.status(401).json({

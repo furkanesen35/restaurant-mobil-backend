@@ -6,7 +6,6 @@ const authValidation = {
     body("email")
       .trim()
       .isEmail()
-      .normalizeEmail()
       .withMessage("Valid email is required"),
     body("password")
       .isLength({ min: 6 })
@@ -17,7 +16,6 @@ const authValidation = {
     body("email")
       .trim()
       .isEmail()
-      .normalizeEmail()
       .withMessage("Valid email is required"),
     body("password").notEmpty().withMessage("Password is required"),
   ],

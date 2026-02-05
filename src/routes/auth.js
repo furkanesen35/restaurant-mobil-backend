@@ -47,13 +47,19 @@ router.post("/google", authController.googleSignIn);
 // Refresh token endpoint (if needed)
 router.post("/refresh", authController.refreshToken);
 
+// ============================================================================
+// AUTHENTICATED ENDPOINTS - No rate limiting
+// These endpoints require JWT authentication which already provides protection
+// Rate limiting here would create poor UX for legitimate users
+// ============================================================================
+
 // Get current user (validates token)
 router.get("/me", authenticate, authController.getCurrentUser);
 
 // Update user profile
 router.put("/profile", authenticate, authController.updateProfile);
 
-// Delete user account
+// Delete user account (GDPR/App Store compliance - must not be blocked)
 router.delete("/account", authenticate, authController.deleteAccount);
 
 module.exports = router;
